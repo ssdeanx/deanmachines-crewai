@@ -1,0 +1,255 @@
+research_task:
+  description: >
+    Conduct a thorough research about {topic}
+    Make sure you find any interesting and relevant information given
+    the current year is {current_year}.
+  expected_output: >
+    A list with 10 bullet points of the most relevant information about {topic}
+  agent: researcher
+
+reporting_task:
+  description: >
+    Review the context you got and expand each topic into a full section for a report.
+    Make sure the report is detailed and contains any and all relevant information.
+  expected_output: >
+    A fully fledged report with the main topics, each with a full section of information.
+    Formatted as markdown without '```'
+  agent: reporting_analyst
+
+# Prompt Mastery Tasks
+research_prompt_techniques:
+  description: >
+    Research current best practices and techniques in prompt engineering
+  expected_output: >
+    A comprehensive summary of modern prompt engineering techniques,
+    including examples and use cases across different domains
+  agent: prompt_researcher
+
+generate_prompt_templates:
+  description: >
+    Design a set of prompt templates for common use cases based on research findings
+  expected_output: >
+    A collection of prompt templates with explanations of their structure,
+    intended use cases, and examples of expected outputs
+  agent: prompt_engineer
+  depends_on:
+    - research_prompt_techniques
+
+document_prompts:
+  description: >
+    Create comprehensive documentation for the prompt templates
+  expected_output: >
+    Documentation files containing detailed descriptions, usage guidelines,
+    examples, and best practices for each prompt template
+  agent: prompt_documentor
+  depends_on:
+    - generate_prompt_templates
+
+# Task templates with variable placeholders
+task_templates:
+  research_template:
+    description_template: >
+      Research {research_topic} with focus on {research_focus}, examining at least
+      {source_count} different {source_type} from the past {timeframe}.
+    output_template: >
+      A comprehensive {output_format} containing {detail_level} analysis of
+      {analysis_topic} with supporting evidence from {evidence_sources}.
+
+  creation_template:
+    description_template: >
+      Create {creation_type} for {target_audience} with {creation_purpose},
+      ensuring {quality_criteria} and adherence to {standards}.
+    output_template: >
+      A collection of {output_count} {output_type} with {organization_method}
+      and {metadata_inclusion} for each {item_type}.
+
+  documentation_template:
+    description_template: >
+      Document {documentation_subject} using {documentation_format} with
+      {documentation_structure}, ensuring {documentation_standards}.
+    output_template: >
+      {output_type} documentation in {file_format} format containing
+      {section_types} with {reference_inclusion} and {example_count} examples.
+
+# Concrete tasks with inheritance from templates
+analyze_prompt_landscape:
+  inherits: task_templates.research_template
+  description: >
+    Research {research_topic|current prompt engineering methodologies} with focus on {research_focus|emerging techniques}, 
+    examining at least {source_count|15} different {source_type|academic papers and industry reports} 
+    from the past {timeframe|12 months}.
+  expected_output: >
+    A comprehensive {output_format|research report} containing {detail_level|in-depth} analysis of
+    {analysis_topic|prompt engineering patterns and their effectiveness} with supporting evidence 
+    from {evidence_sources|peer-reviewed research and industry benchmarks}.
+  agent: prompt_researcher
+  context: >
+    Focus particularly on techniques applicable to {model_type|large language models} 
+    with {model_architecture|transformer-based architectures}.
+
+map_prompt_patterns:
+  inherits: task_templates.research_template
+  description: >
+    Identify and categorize {research_focus|common patterns in effective prompts} 
+    across {domain_count|5+} domains, analyzing how {analysis_subject|structural elements} 
+    affect {performance_metric|response quality}.
+  expected_output: >
+    A {output_format|taxonomic breakdown} of {classification_subject|prompt patterns} 
+    with {analysis_type|comparative analysis} of their effectiveness in {context_types|different contexts}.
+  agent: prompt_researcher
+  depends_on:
+    - analyze_prompt_landscape
+  context: >
+    Consider how patterns vary across {model_size_range|different model sizes} and 
+    {specialization_types|specialized vs. general models}.
+
+design_prompt_templates:
+  inherits: task_templates.creation_template
+  description: >
+    Create {creation_type|modular prompt templates} for {target_audience|technical and non-technical users} 
+    with {creation_purpose|variable placeholders for customization}, ensuring {quality_criteria|consistency in output format} 
+    and adherence to {standards|established best practices from research}.
+  expected_output: >
+    A collection of {output_count|10+} {output_type|prompt templates} with {organization_method|categorical organization by use case}
+    and {metadata_inclusion|performance characteristics} for each {item_type|template}.
+  agent: prompt_engineer
+  depends_on:
+    - map_prompt_patterns
+  context: >
+    Templates should support {variable_types|text, numerical, and categorical} variables and include
+    {guidance_type|usage notes} for optimal implementation.
+
+build_prompt_library:
+  inherits: task_templates.creation_template
+  description: >
+    Develop a {creation_type|comprehensive prompt library} organized by {organization_method|domain and complexity},
+    with {feature_inclusion|built-in evaluation metrics} for each prompt template.
+  expected_output: >
+    A structured {output_type|prompt collection} with {metadata_count|5+} metadata fields per template,
+    including {metadata_fields|effectiveness score, ideal use cases, limitations, and example outputs}.
+  agent: prompt_engineer
+  depends_on:
+    - design_prompt_templates
+  context: >
+    Include prompts specifically optimized for {model_list|gemma, llama, mistral} models 
+    running in {deployment_context|Ollama local environments}.
+
+test_prompt_effectiveness:
+  inherits: task_templates.creation_template
+  description: >
+    Evaluate {evaluation_subject|each prompt template} using {methodology|systematic testing approach}
+    across {dimension_count|multiple} dimensions including {dimensions|coherence, relevance, and factuality}.
+  expected_output: >
+    A {output_format|detailed test report} with {metric_type|quantitative and qualitative} assessments
+    for each template, including {improvement_suggestions|specific recommendations for refinement}.
+  agent: prompt_tester
+  depends_on:
+    - build_prompt_library
+  context: >
+    Apply more rigorous testing to {priority_templates|high-impact templates} like those for
+    {use_case_examples|code generation, reasoning tasks, and creative content}.
+
+document_prompt_library:
+  inherits: task_templates.documentation_template
+  description: >
+    Document {documentation_subject|the complete prompt library} using {documentation_format|markdown and YAML frontmatter}
+    with {documentation_structure|hierarchical organization}, ensuring {documentation_standards|comprehensive metadata and examples}.
+  expected_output: >
+    {output_type|Comprehensive} documentation in {file_format|markdown} format containing
+    {section_types|sections} with {reference_inclusion|references} and {example_count|multiple} examples.
+  agent: prompt_documentor
+  depends_on:
+    - test_prompt_effectiveness
+
+reasoning_task:
+  template: reasoning
+  description: >
+    Analyze problem using analytical reasoning framework
+  variables:
+    problem_domain: "{domain}"
+    analysis_depth: "detailed"
+    structured_output: "json"
+    task_context: "{context}"
+    chain_results: "{previous_results}"
+  agent:
+    role: analytical_expert
+    goal: "Provide comprehensive problem analysis"
+    tools: ["research", "analyze", "summarize"]
+    allowed_chains: ["research_task", "reporting_task"]
+
+# Add new structured thinking tasks
+
+structured_analysis_task:
+  template: tags
+  description: >
+    Apply XML-based structured thinking to analyze {topic} using systematic branching patterns
+  variables:
+    context: "{analysis_context}"
+    objective: "{analysis_goal}"
+    depth: "comprehensive"
+    reasoning_style: "analytical"
+  agent: structured_thinking_expert
+  expected_output: >
+    A structured analysis following the XML template pattern with clear branches for:
+    - Plan section with execution details
+    - Thoughts section with strategic elements
+    - Analysis section with component breakdown
+    - Execution section with implementation steps
+
+branching_analysis_task:
+  template: tags
+  description: >
+    Develop comprehensive branch analysis for {topic} with multiple decision paths
+  variables:
+    context: "{decision_context}"
+    objective: "Map decision tree with alternatives"
+    format: "structured"
+    depth: "detailed"
+  agent: analysis_expert
+  expected_output: >
+    A detailed branch analysis using XML tags and CDATA sections covering:
+    - Multiple decision paths
+    - Alternative scenarios
+    - Impact assessment
+    - Risk evaluation
+
+task_chain_template:
+  description_template: >
+    Apply {analysis_type} thinking pattern to {subject} using XML-structured approach
+    with {branch_depth} levels of analysis and {validation_criteria} validation
+  output_template: >
+    XML-structured analysis with CDATA sections containing:
+    - {component_count} main components
+    - {branch_count} decision branches
+    - {metric_count} evaluation metrics
+    - {validation_count} quality checks
+
+advanced_reasoning_task:
+  inherits: task_chain_template
+  template: tags
+  description: >
+    Conduct systematic analysis of {topic} using XML-structured thinking patterns
+    with focus on {focus_areas} and consideration of {constraint_set}
+  variables:
+    context: "{problem_context}"
+    depth: "comprehensive"
+    format: "structured"
+    reasoning_style: "analytical"
+  agent:
+    role: structured_thinking_expert
+    goal: "Generate comprehensive structured analysis"
+    tools: ["template_validation", "pattern_recognition", "logic_verification"]
+    allowed_chains: ["research_task", "branching_analysis_task"]
+
+structured_thinking_pipeline:
+  template: tags
+  description: >
+    Apply structured thinking to {topic} using:
+    - XML-based thought organization
+    - Branching analysis patterns
+    - CDATA sections for content
+  steps:
+    - initial_analysis
+    - branch_development
+    - pattern_recognition
+    - validation_check
