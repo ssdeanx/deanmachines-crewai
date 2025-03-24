@@ -1,0 +1,42 @@
+dashboard:
+  experiment_name: "ollama_crew_monitoring"
+  tracking_uri: "sqlite:///mlflow.db"
+  artifacts_path: "./mlflow-artifacts"
+  
+metrics:
+  validation:
+    - name: "validation_score"
+      threshold: 0.8
+    - name: "error_count"
+      threshold: 5
+    - name: "structure_violations"
+      threshold: 2
+      
+  performance:
+    - name: "execution_time"
+      unit: "seconds"
+      warning_threshold: 10.0
+      error_threshold: 30.0
+    - name: "memory_usage"
+      unit: "MB"
+      warning_threshold: 500
+      error_threshold: 1000
+    - name: "success_rate"
+      unit: "percentage"
+      minimum_threshold: 0.95
+
+visualization:
+  default_theme: "plotly_dark"
+  refresh_interval: 60  # seconds
+  retention_period: 30  # days
+  
+alerts:
+  enabled: true
+  channels:
+    - type: "logging"
+      level: "WARNING"
+    - type: "email"
+      recipients: ["admin@example.com"]
+  thresholds:
+    critical_error_count: 5
+    performance_degradation: 0.2

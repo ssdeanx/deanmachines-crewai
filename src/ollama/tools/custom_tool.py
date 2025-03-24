@@ -1,33 +1,43 @@
 import json
 import logging
+from multiprocessing import util
 import os
-from asyncio.log import logger
-from dataclasses import dataclass
+import time
+import xml.etree.ElementTree as ET
 from datetime import datetime
+from dataclasses import dataclass
 from enum import Enum
+from functools import wraps
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, Union
 
-import xml.etree.ElementTree as ET
 from crewai import Tool
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
-# Custom Exceptions
 class XMLValidationError(Exception):
-    """Custom exception for XML validation errors"""
+    """Custom exception for XML validation errors."""
     pass
 
 class StructureError(Exception):
-    """Custom exception for structure-related errors"""
+    """Custom exception for structure-related errors."""
     pass
 
-# Input Models
-class MyCustomToolInput(BaseModel):
-    """Input schema for MyCustomTool."""
-    argument: str = Field(..., description="Description of the argument.")
+@dataclass
+class ValidationResult:
+    """Structured validation result."""
+    valid: bool
+    score: float
+    issues: List[str]
+    details: Dict[str, Any]
+
+class ValidationLevel(Enum):
+    """Validation severity levels."""
+    STRICT = "strict"
+    NORMAL = "normal"
+    RELAXED = "relaxed"
 
 class XMLStructureInput(BaseModel):
     """Input schema for XML structure validation."""
@@ -46,31 +56,9 @@ class BranchAnalysisInput(BaseModel):
     depth: int = Field(default=3, description="Branch depth")
     width: int = Field(default=3, description="Maximum alternatives per node")
 
-class PatternRecognitionInput(BaseModel):
-    """Input schema for pattern recognition in thinking structures."""
-    content: str = Field(..., description="Content to analyze")
-    pattern_types: List[str] = Field(
-        default=["decision", "analysis", "implementation"]
-    )
-
-# Data Models
-@dataclass
-class ValidationResult:
-    """Structured validation result"""
-    valid: bool
-    score: float
-    issues: List[str]
-    details: Dict[str, Any]
-
-class ValidationLevel(Enum):
-    """Validation severity levels"""
-    STRICT = "strict"
-    NORMAL = "normal"
-    RELAXED = "relaxed"
-
-# Mixins
 class SmartRecoveryMixin:
-    """Add to tools for intelligent error recovery"""
+    """Add to tools for intelligent error recovery."""
+    
     def recover_from_error(self, error: Exception, context: Dict) -> Dict:
         """Attempt to recover from various error types."""
         try:
@@ -98,7 +86,17 @@ class SmartRecoveryMixin:
         # Implementation here
         return {"status": "recovered", "context": context}
 
-# Tools
+class MyCustomToolInput(BaseModel):
+    """Input schema for MyCustomTool."""
+    argument: str = Field(..., description="Description of the argument.")
+
+class PatternRecognitionInput(BaseModel):
+    """Input schema for pattern recognition in thinking structures."""
+    content: str = Field(..., description="Content to analyze")
+    pattern_types: List[str] = Field(
+        default=["decision", "analysis", "implementation"]
+    )
+
 class StructuredThinkingTool(BaseTool, SmartRecoveryMixin):
     """Tool for structured thinking pattern validation and analysis."""
     name: str = "structured_thinking_tool"
@@ -389,6 +387,50 @@ class AdvancedValidator:
         }
         
         return self._check_patterns(content, patterns)
+
+class PerformanceMonitor:
+    """Monitor and optimize system performance"""
+    def __init__(self):
+        self.metrics = {
+            "execution_times": [],
+            "success_rates": [],
+            "error_rates": [],
+            "validation_scores": [],
+            "memory_usage": [],
+            "complexity_scores": []
+        }
+        self.start_time = datetime.now()
+        
+    def track_execution(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            memory_start = util.Process().memory_info().rss
+            try:
+                result = func(*args, **kwargs)
+                self.metrics["success_rates"].append(1)
+                self.metrics["error_rates"].append(0)
+                return result
+            except Exception as e:
+                self.metrics["success_rates"].append(0)
+                self.metrics["error_rates"].append(1)
+                raise
+            finally:
+                execution_time = time.time() - start_time
+                memory_used = (util.Process().memory_info().rss - memory_start) / (1024 * 1024)
+                self.metrics["execution_times"].append(execution_time)
+                self.metrics["memory_usage"].append(memory_used)
+        return wrapper
+
+    def get_performance_summary(self) -> Dict:
+        """Get summary of performance metrics"""
+        return {
+            "average_execution_time": sum(self.metrics["execution_times"]) / len(self.metrics["execution_times"]) if self.metrics["execution_times"] else 0,
+            "success_rate": sum(self.metrics["success_rates"]) / len(self.metrics["success_rates"]) if self.metrics["success_rates"] else 0,
+            "error_rate": sum(self.metrics["error_rates"]) / len(self.metrics["error_rates"]) if self.metrics["error_rates"] else 0,
+            "average_memory_usage": sum(self.metrics["memory_usage"]) / len(self.metrics["memory_usage"]) if self.metrics["memory_usage"] else 0,
+            "total_runtime": (datetime.now() - self.start_time).total_seconds()
+        }
 
 # Add to template files
 current_date = datetime.now().strftime("%Y-%m-%d")
