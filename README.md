@@ -309,63 +309,76 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 See [CHANGELOG.md](CHANGELOG.md) for version history and updates.
 
 ```mermaid
-graph TD
-    subgraph "Model Coordination Layer"
-        geminiCoord[Gemini Coordinator]
-        lmCoord[LMStudio Coordinator]
-        ollamaCoord[Ollama Coordinator]
-        crewInterface[Common Crew Interface]
+graph TB
+    User((External User))
+
+    subgraph "AI Analysis System"
+        subgraph "Model Integration Layer"
+            GeminiContainer["Gemini Integration<br>(Python/Google AI)"]
+            OllamaContainer["Ollama Integration<br>(Python/Ollama)"]
+            LMStudioContainer["LMStudio Integration<br>(Python/LMStudio)"]
+        end
+
+        subgraph "Core System"
+            CrewManager["Crew Management<br>(CrewAI)"]
+            TaskManager["Task Management<br>(YAML Config)"]
+
+            subgraph "Tools Layer"
+                CustomTools["Custom Tools<br>(Python)"]
+                LangChainTools["LangChain Tools<br>(LangChain)"]
+                LangGraphTools["LangGraph Tools<br>(LangGraph)"]
+            end
+
+            subgraph "Knowledge Management"
+                KnowledgeBase["Knowledge Base<br>(YAML/JSON)"]
+                PromptTemplates["Prompt Templates<br>(Markdown)"]
+                Categories["Categories System<br>(YAML)"]
+            end
+        end
+
+        subgraph "Monitoring & Analytics"
+            MLFlow["MLFlow Tracking<br>(MLflow)"]
+            Dashboard["MLFlow Dashboard<br>(Python/MLflow)"]
+        end
+
+        subgraph "Utility Components"
+            ConfigManager["Configuration Manager<br>(YAML)"]
+            KnowledgeManager["Knowledge Manager<br>(Python)"]
+            PerformanceMonitor["Performance Monitor<br>(Python)"]
+        end
     end
 
-    subgraph "Knowledge Management"
-        knowledgeManager[Knowledge Manager]
-        indexStore[Index Store]
-        categoryManager[Category Manager]
-        entryManager[Entry Manager]
+    subgraph "External Services"
+        SerperDev["Serper.dev API<br>(REST)"]
     end
 
-    subgraph "MLflow Monitoring"
-        mlflowDashboard[MLflow Dashboard]
-        metricTracker[Metric Tracking]
-        experimentManager[Experiment Manager]
-    end
+    User -->|Interacts| CrewManager
 
-    subgraph "Tools Integration"
-        langchainTools[LangChain Tools]
-        customTools[Custom Tools]
-        formatterTools[Formatter Tools]
-        searchTools[Search Tools]
-    end
+    CrewManager -->|Manages| GeminiContainer
+    CrewManager -->|Manages| OllamaContainer
+    CrewManager -->|Manages| LMStudioContainer
 
-    subgraph "Core Processing"
-        structuredThinking[Structured Thinking]
-        branchAnalysis[Branch Analysis]
-        researchAnalysis[Research Analysis]
-    end
+    CrewManager -->|Uses| TaskManager
+    TaskManager -->|Configures| CustomTools
+    TaskManager -->|Configures| LangChainTools
+    TaskManager -->|Configures| LangGraphTools
 
-    %% Verified connections from code
-    ollamaCoord --> crewInterface
-    crewInterface --> customTools
-    knowledgeManager --> indexStore
-    knowledgeManager --> categoryManager
-    knowledgeManager --> entryManager
-    mlflowDashboard --> metricTracker
-    mlflowDashboard --> experimentManager
-    langchainTools --> structuredThinking
-    langchainTools --> branchAnalysis
-    langchainTools --> researchAnalysis
-    customTools --> formatterTools
-    customTools --> searchTools
+    CustomTools -->|Accesses| KnowledgeBase
+    LangChainTools -->|Uses| SerperDev
 
-    %% MLflow connections from config
-    ollamaCoord --> mlflowDashboard
-    mlflowDashboard --> metricTracker
+    KnowledgeManager -->|Manages| KnowledgeBase
+    KnowledgeManager -->|Manages| PromptTemplates
+    KnowledgeManager -->|Manages| Categories
 
-    %% Knowledge management connections from implementation
-    ollamaCoord --> knowledgeManager
-    knowledgeManager --> indexStore
+    CrewManager -->|Logs to| MLFlow
+    MLFlow -->|Displays in| Dashboard
 
-    %% Tool integration connections from directory structure
-    crewInterface --> langchainTools
-    crewInterface --> customTools
+    ConfigManager -->|Configures| CrewManager
+    ConfigManager -->|Configures| TaskManager
+
+    PerformanceMonitor -->|Tracks| MLFlow
+
+    GeminiContainer -->|Uses| KnowledgeManager
+    OllamaContainer -->|Uses| KnowledgeManager
+    LMStudioContainer -->|Uses| KnowledgeManager
 ```
