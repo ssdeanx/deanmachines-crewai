@@ -3,6 +3,8 @@
         "crewai",
         "dotenv",
         "levelname",
+        "LMSTUDIO",
+        "mlflow",
         "ollama",
         "pysbd"
     ]
