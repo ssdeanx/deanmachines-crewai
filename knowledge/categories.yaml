@@ -1,0 +1,72 @@
+# Knowledge Base Categories
+model_specific:
+  gemini:
+    - gemini-pro
+    - gemini-vision
+    - gemini-ultra
+    - gemini-embedding
+    subcategories:
+      - prompts
+      - performance
+      - limitations
+      - use-cases
+  ollama:
+    - gemma-3:4b
+    subcategories:
+      - prompts
+      - performance
+      - limitations
+      - use-cases
+  lmstudio:
+    - gemma-3-4b-it
+    subcategories:
+      - prompts
+      - performance
+      - limitations
+      - use-cases
+
+prompt_templates:
+  reasoning:
+    - system-prompts
+    - chain-of-thought
+    - structured-thinking
+  research:
+    - data-collection
+    - analysis-patterns
+    - synthesis
+  creative:
+    - generation
+    - innovation
+    - brainstorming
+  technical:
+    - code-generation
+    - system-design
+    - documentation
+
+domain_knowledge:
+  machine_learning:
+    - architectures
+    - training
+    - deployment
+    - optimization
+  software_engineering:
+    - patterns
+    - practices
+    - tools
+    - frameworks
+  data_science:
+    - analysis
+    - visualization
+    - statistics
+    - pipelines
+
+relationships:
+  - source: prompt_templates/reasoning
+    target: model_specific/gemini/prompts
+    type: implementation
+  - source: domain_knowledge/machine_learning
+    target: model_specific/gemini/performance
+    type: reference
+  - source: prompt_templates/technical
+    target: domain_knowledge/software_engineering
+    type: application

@@ -1,0 +1,108 @@
+web_search:
+  name: "web_search"
+  description: "Search the web for information"
+  args:
+    api_key: ${SERPER_API_KEY}
+    max_results: 5
+
+file_analyzer:
+  name: "file_analyzer"
+  description: "Analyze file contents"
+  args:
+    supported_formats: ["txt", "md", "py", "json", "yaml"]
+    max_file_size: 10485760  # 10MB
+
+knowledge_base:
+  name: "knowledge_base"
+  description: "Access and query knowledge base"
+  args:
+    base_path: "./knowledge"
+    index_type: "simple"
+
+structured_analysis:
+  name: "structured_analysis"
+  description: "Perform structured analysis of information"
+  args:
+    formats: ["xml", "json", "yaml"]
+    validation: true
+
+validation_tool:
+  name: "validation_tool"
+  description: "Validate analysis results"
+  args:
+    criteria:
+      - completeness
+      - accuracy
+      - relevance
+    threshold: 0.8
+
+insight_generator:
+  name: "insight_generator"
+  description: "Generate insights from analysis"
+  args:
+    formats: ["markdown", "json"]
+    max_insights: 10
+    min_confidence: 0.7
+
+advanced_reasoning:
+  name: "advanced_reasoning"
+  description: "Enhanced reasoning and analysis capabilities"
+  args:
+    analysis_levels: ["basic", "detailed", "comprehensive"]
+    thinking_patterns: ["system", "meta", "future"]
+    validation: true
+
+multimodal_analysis:
+  name: "multimodal_analysis"
+  description: "Advanced multimodal content analysis"
+  args:
+    supported_types: ["text", "image", "audio", "video"]
+    max_input_size: 104857600  # 100MB
+    parallel_processing: true
+
+thinking_mode:
+  name: "thinking_mode"
+  description: "Control model's thinking approach"
+  args:
+    modes: ["standard", "enhanced", "experimental"]
+    default_mode: "enhanced"
+    features:
+      - "context_understanding"
+      - "pattern_recognition"
+      - "hypothesis_generation"
+      - "validation"
+
+tool_use:
+  name: "tool_use"
+  description: "Native tool use capabilities"
+  args:
+    supported_tools: ["code", "search", "analysis", "generation"]
+    max_tools_per_request: 5
+    timeout: 30  # seconds
+
+code_generation:
+  name: "code_generation"
+  description: "Advanced code generation and analysis"
+  args:
+    languages: ["python", "javascript", "typescript", "go", "java"]
+    max_context_size: 32768
+    include_tests: true
+    optimization_levels: ["basic", "advanced"]
+
+image_generation:
+  name: "image_generation"
+  description: "Experimental image generation capabilities"
+  args:
+    max_size: [2048, 2048]
+    formats: ["pil", "jpeg", "png"]
+    styles: ["natural", "artistic", "photographic"]
+    experimental: true
+
+audio_generation:
+  name: "audio_generation"
+  description: "Coming soon: Audio generation capabilities"
+  args:
+    formats: ["wav", "mp3"]
+    voices: ["default"]
+    max_duration: 300  # seconds
+    status: "coming_soon"

@@ -1,0 +1,96 @@
+type: object
+required:
+  - model_id
+  - version
+  - capabilities
+properties:
+  model_id:
+    type: string
+  version:
+    type: string
+  base_model:
+    type: string
+  capabilities:
+    type: object
+    properties:
+      text_generation:
+        type: boolean
+      chat:
+        type: boolean
+      code:
+        type: boolean
+      vision:
+        type: boolean
+      embedding:
+        type: boolean
+  context_window:
+    type: integer
+  max_tokens:
+    type: integer
+  supported_languages:
+    type: array
+    items:
+      type: string
+  performance_metrics:
+    type: object
+    properties:
+      throughput:
+        type: number
+      latency:
+        type: number
+      memory_usage:
+        type: number
+  quantization_options:
+    type: array
+    items:
+      type: string
+  deployment:
+    type: object
+    properties:
+      platforms:
+        type: array
+        items:
+          type: string
+      requirements:
+        type: object
+  fine_tuning:
+    type: object
+    properties:
+      supported:
+        type: boolean
+      methods:
+        type: array
+        items:
+          type: string
+  best_practices:
+    type: array
+    items:
+      type: object
+      properties:
+        category:
+          type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+  limitations:
+    type: array
+    items:
+      type: string
+  optimization_tips:
+    type: array
+    items:
+      type: string
+  integration_guides:
+    type: array
+    items:
+      type: object
+      properties:
+        platform:
+          type: string
+        guide:
+          type: string
+        examples:
+          type: array
+          items:
+            type: string

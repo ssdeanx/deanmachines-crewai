@@ -1,0 +1,62 @@
+# Knowledge Base Configuration
+storage:
+  base_path: "./knowledge"
+  index_type: "simple"
+  formats:
+    - md
+    - json
+    - yaml
+    - txt
+
+categories:
+  - name: prompt-templates
+    description: "Structured prompting patterns and templates"
+    subcategories:
+      - reasoning
+      - research
+      - creative
+      - technical
+      - meta
+  - name: model-specific
+    description: "Model-specific knowledge and capabilities"
+    subcategories:
+      - gemini
+      - llama
+      - mistral
+  - name: domain-knowledge
+    description: "Specialized domain information"
+    subcategories:
+      - machine-learning
+      - software-engineering
+      - data-science
+  - name: best-practices
+    description: "Guidelines and recommended practices"
+    subcategories:
+      - code
+      - architecture
+      - testing
+      - deployment
+
+indexing:
+  update_frequency: "daily"
+  max_file_size: 10485760  # 10MB
+  exclude_patterns:
+    - "*.tmp"
+    - "*.log"
+    - "*.bak"
+
+validation:
+  schema_validation: true
+  content_validation: true
+  format_validation: true
+  relationship_validation: true
+
+relationships:
+  enable_cross_references: true
+  track_dependencies: true
+  maintain_hierarchy: true
+
+caching:
+  enabled: true
+  max_size: 1073741824  # 1GB
+  ttl: 3600  # 1 hour

@@ -17,7 +17,7 @@ prompt_engineer:
   role: >
     {specialization|Strategic} Prompt {seniority|Architect} with expertise in {domain_expertise|system design}
   goal: >
-    Leverage advanced {technique|meta-prompting} techniques to create highly effective prompts 
+    Leverage advanced {technique|meta-prompting} techniques to create highly effective prompts
     for {model_type|generative} models that {objective|maximize coherence and relevance}
   backstory: >
     With {experience_years|8}+ years crafting prompts across {industry_count|12}+ industries,
@@ -33,11 +33,11 @@ prompt_researcher:
   role: >
     {specialization|Analytical} Prompt {seniority|Researcher} with expertise in {domain_expertise|academic literature}
   goal: >
-    Conduct systematic analysis of {research_scope|prompt patterns} across {model_category|various LLM architectures} 
+    Conduct systematic analysis of {research_scope|prompt patterns} across {model_category|various LLM architectures}
     to identify {objective|optimal prompting strategies}
   backstory: >
     Your research in prompt engineering has been cited in {citation_count|15}+ academic papers.
-    You've developed methodologies that {achievement|extract 30% more pertinent information} 
+    You've developed methodologies that {achievement|extract 30% more pertinent information}
     from language models through {specialty|contextual framing techniques}.
   temperature: {temperature|0.5}
   tools:
@@ -50,7 +50,7 @@ prompt_documentor:
   role: >
     {specialization|Technical} Prompt {seniority|Documentation Specialist} with expertise in {domain_expertise|knowledge management}
   goal: >
-    Create comprehensive {documentation_type|technical reference guides} for prompt libraries 
+    Create comprehensive {documentation_type|technical reference guides} for prompt libraries
     with {documentation_focus|implementation examples} and {measurement_metrics|effectiveness metrics}
   backstory: >
     You've documented prompt systems for {company_count|50}+ enterprise organizations,
@@ -121,3 +121,225 @@ xml_thinking_specialist:
     - structured_thinking_tool
     - branch_analysis_tool
     - pattern_recognition_tool
+
+# Agent Configurations with Memory and Advanced Settings
+base_config:
+  memory:
+    enabled: true
+    type: "conversation_buffer"
+    max_tokens: 1048576  # Flash model context limit
+    memory_key: "chat_history"
+    return_messages: true
+    output_key: "output"
+    input_key: "input"
+  llm_settings:
+    temperature: 0.7
+    top_p: 0.95
+    presence_penalty: 0.0
+    frequency_penalty: 0.0
+    max_tokens: 8192  # Output token limit
+  validation:
+    validate_outputs: true
+    validate_inputs: true
+    structured_output: true
+  model_settings:
+    default_model: "${GEMINI_MODEL:-models/gemini-2.0-flash}"
+    available_models:
+      gemini_flash:
+        name: "models/gemini-2.0-flash"
+        context_window: 1048576
+        max_tokens: 8192
+      gemini_flash_lite:
+        name: "models/gemini-2.0-flash-lite"
+        context_window: 1048576
+        max_tokens: 8192
+      gemini_pro:
+        name: "models/gemini-2.0-pro-exp-02-05"
+        context_window: 32768
+        max_tokens: 8192
+      lmstudio:
+        name: "${LMSTUDIO_MODEL}"
+        context_window: 4096
+        max_tokens: 2048
+      lmstudio_emb:
+        name: "text-embedding-nomic-embed-text-v1.5"
+        context_window: 4096
+        max_tokens: 2048
+
+# Research Expert Agent
+researcher:
+  role: "Research Expert"
+  goal: "Conduct comprehensive research and gather accurate information"
+  backstory: "Expert researcher with advanced analytical capabilities and information synthesis skills"
+  allow_delegation: true
+  model:
+    type: "gemini_flash"
+    settings:
+      temperature: 0.7
+      top_p: 0.95
+  memory:
+    inherit: true  # Inherit base memory config
+    context_window: 1048576  # Full Flash model context
+    memory_type: "vectorstore"  # Enhanced memory type
+  tools:
+    - web_search
+    - file_analyzer
+    - knowledge_base
+  verbose: true
+  max_iter: 5
+  max_rpm: 100  # Rate limit for API calls
+  async_execution: true
+
+# Analysis Expert Agent
+analyzer:
+  role: "Analysis Expert"
+  goal: "Process and analyze information with advanced reasoning"
+  backstory: "Expert analyst specializing in pattern recognition and data interpretation"
+  allow_delegation: true
+  model:
+    type: "gemini_flash_lite"
+    settings:
+      temperature: 0.6
+      top_p: 0.9
+  memory:
+    inherit: true
+    selective_memory: true  # Only store important information
+    context_window: 1048576
+    memory_priority: "high"
+    contextual_recall: true
+  tools:
+    - structured_analysis
+    - validation_tool
+    - insight_generator
+  verbose: true
+  max_iter: 3
+  parallel_processing: true
+
+# Code Expert Agent
+code_expert:
+  role: "Code Analysis Expert"
+  goal: "Analyze and generate code with best practices"
+  backstory: "Expert software engineer with deep knowledge of code analysis and generation"
+  allow_delegation: true
+  model:
+    type: "lmstudio"
+    settings:
+      temperature: 0.8
+      top_p: 0.95
+  memory:
+    inherit: true
+    code_context: true  # Special memory for code
+    context_window: 4096
+    memory_type: "code_aware"
+  tools:
+    - code_execution
+    - code_analysis
+    - code_generation
+  verbose: true
+  execution_mode: "safe"
+  sandbox_environment: true
+
+# Integration Expert Agent
+integrator:
+  role: "Integration Expert"
+  goal: "Coordinate between different agents and systems"
+  backstory: "Expert system integrator with experience in complex system coordination"
+  allow_delegation: true
+  model:
+    primary: "gemini_flash"
+    embedding: "lmstudio_emb"
+    settings:
+      temperature: 0.7
+      top_p: 0.95
+  memory:
+    inherit: true
+    shared_memory: true  # Share memory across agents
+    global_context: true
+    context_window: 1048576
+    embedding_model: "lmstudio_emb"
+  tools:
+    - agent_coordinator
+    - workflow_manager
+    - resource_allocator
+  verbose: true
+  coordination_mode: "active"
+
+# Advanced Agent Settings
+agent_settings:
+  execution:
+    async_enabled: true
+    parallel_tasks: 3
+    timeout: 300  # seconds
+    retry_attempts: 3
+  monitoring:
+    log_level: "INFO"
+    track_performance: true
+    track_memory_usage: true
+    track_tool_usage: true
+  optimization:
+    batch_processing: true
+    resource_aware: true
+    adaptive_execution: true
+  validation:
+    input_validation: true
+    output_validation: true
+    context_validation: true
+  security:
+    sandbox_mode: true
+    rate_limiting: true
+    credential_check: true
+
+# Memory Configuration Details
+memory_settings:
+  conversation_buffer:
+    max_history: 50
+    priority_based: true
+    cleanup_frequency: "auto"
+  vectorstore:
+    engine: "faiss"
+    dimension: 1536
+    similarity_threshold: 0.8
+  selective:
+    importance_threshold: 0.7
+    max_tokens_per_entry: 1000
+    pruning_strategy: "importance"
+  code_aware:
+    language_support: ["python", "javascript", "go"]
+    context_window: 1048576
+    token_limit: 8192
+  model_specific:
+    gemini_flash:
+      max_history: 100
+      cleanup_threshold: 900000  # 90% of context window
+    gemini_flash_lite:
+      max_history: 80
+      cleanup_threshold: 900000
+    lmstudio:
+      max_history: 40
+      cleanup_threshold: 3500  # ~85% of context window
+    lmstudio_emb:
+      max_history: 40
+      cleanup_threshold: 3500
+
+# Tool Access Configuration
+tool_access:
+  web_search:
+    allowed_agents: ["researcher"]
+    rate_limit: 10
+  code_execution:
+    allowed_agents: ["code_expert"]
+    sandbox_required: true
+  agent_coordinator:
+    allowed_agents: ["integrator"]
+    coordination_level: "full"
+
+# Agent Communication
+communication:
+  protocol: "async"
+  message_format: "structured"
+  broadcast_enabled: true
+  coordination_method: "consensus"
+  delegation_rules:
+    max_depth: 3
+    approval_required: false
+    priority_override: true

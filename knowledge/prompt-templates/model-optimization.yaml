@@ -1,0 +1,102 @@
+id: model-optimization
+name: Model Performance Optimization
+category: Technical
+description: Template for optimizing model performance and resource utilization
+variables:
+  - name: model_name
+    description: Name of the model to optimize
+    type: text
+  - name: performance_target
+    description: Primary optimization goal
+    type: choice
+    options: [latency, throughput, memory, quality]
+    default: latency
+  - name: resource_constraints
+    description: Available system resources
+    type: object
+    properties:
+      max_memory: number
+      max_concurrent: number
+  - name: batch_settings
+    description: Batch processing configuration
+    type: object
+    properties:
+      enabled: boolean
+      size: number
+      timeout: number
+  - name: streaming
+    description: Enable response streaming
+    type: boolean
+    default: true
+
+effectiveness_score: 92
+use_cases:
+  - Production deployment optimization
+  - Resource utilization improvement
+  - Response time optimization
+  - Quality-performance balance
+
+template: |
+  System: You are an expert in {model_name} optimization with deep understanding of model behavior and system resources.
+
+  Objective: Optimize model performance for {performance_target} while respecting resource constraints:
+  - Max Memory: {resource_constraints.max_memory}GB
+  - Max Concurrent Requests: {resource_constraints.max_concurrent}
+
+  Consider the following aspects:
+
+  1. Resource Management:
+     - Memory allocation strategies
+     - CPU/GPU utilization patterns
+     - Cache management approaches
+     - Request queuing mechanisms
+
+  2. Processing Optimization:
+     {% if batch_settings.enabled %}
+     - Batch processing configuration:
+       * Batch size: {batch_settings.size}
+       * Timeout: {batch_settings.timeout}ms
+     {% endif %}
+     {% if streaming %}
+     - Streaming optimization:
+       * Token delivery patterns
+       * Buffer management
+       * Client connection handling
+     {% endif %}
+
+  3. Quality Controls:
+     - Response validation
+     - Error handling
+     - Fallback strategies
+     - Monitoring points
+
+  Provide specific optimization recommendations following this structure:
+  ```json
+  {
+    "configuration": {
+      "memory_settings": {},
+      "processing_settings": {},
+      "quality_controls": {}
+    },
+    "implementation": {
+      "code_examples": [],
+      "monitoring_setup": {},
+      "fallback_strategy": {}
+    },
+    "validation": {
+      "success_metrics": [],
+      "warning_signs": [],
+      "monitoring_points": []
+    }
+  }
+  ```
+
+model_compatibility:
+  - gemini
+  - llama
+  - mistral
+
+limitations:
+  - Model-specific optimizations may vary
+  - Resource measurements needed
+  - Requires system-level access

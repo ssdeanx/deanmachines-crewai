@@ -1,67 +1,126 @@
-# Ollama Crew - Advanced AI Agent Framework
+<div align="center">
 
-> Enterprise-grade multi-agent AI system with MLflow integration, XML-structured thinking, and advanced analytics.
+# Cognitive Crew AI Framework
 
-[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](docs/)
-[![MLflow](https://img.shields.io/badge/MLflow-integrated-blue.svg)](https://mlflow.org)
-[![Discord](https://img.shields.io/discord/1234567890)](https://discord.gg/X4JWnZnxPb)
+> Next-Generation Enterprise AI System with Advanced Model Integration and MLflow Analytics
 
-## 🌟 Features
+[Features](#-core-features) •
+[Installation](#-quick-start) •
+[Documentation](#-documentation) •
+[Contributing](#-contributing)
 
-- 🤖 **XML-Structured Thinking**: Systematic problem-solving with validated patterns
-- 📊 **MLflow Integration**: Advanced performance monitoring and experiment tracking
-- 🌳 **Advanced Branching**: Multi-path decision tree analysis
-- 🔍 **Smart Validation**: Context-aware error handling and recovery
-- 📈 **Real-time Dashboard**: Live metrics and performance visualization
-- 🔄 **Parallel Processing**: Efficient task execution and resource management
-- 📝 **Enterprise Templates**: Production-ready template library
+[![Python](https://img.shields.io/badge/Python-3.10%20|%203.11%20|%203.12-blue?logo=python)](https://www.python.org/)
+[![MLflow](https://img.shields.io/badge/MLflow-Latest-blue?logo=mlflow)](https://mlflow.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Latest-blue?logo=postgresql)](https://www.postgresql.org/)
+[![Gemini](https://img.shields.io/badge/Gemini%202.0-Flash-purple?logo=google)](https://ai.google.dev/)
+[![LangChain](https://img.shields.io/badge/LangChain-Latest-green?logo=chainlink)](https://langchain.com)
+[![LangGraph](https://img.shields.io/badge/LangGraph-Latest-yellow)](https://python.langchain.com/docs/langgraph)
+[![CrewAI](https://img.shields.io/badge/CrewAI-Latest-red)](https://www.crewai.com/)
+[![Selenium](https://img.shields.io/badge/Selenium-Latest-green?logo=selenium)](https://www.selenium.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Latest-blue?logo=docker)](https://www.docker.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Latest-teal?logo=fastapi)](https://fastapi.tiangolo.com/)
+[![UV](https://img.shields.io/badge/UV-Latest-purple?logo=python)](https://docs.astral.sh/uv/)
+[![Pytest](https://img.shields.io/badge/Pytest-Latest-blue?logo=pytest)](https://docs.pytest.org/)
+[![Black](https://img.shields.io/badge/Black-Latest-black?logo=python)](https://black.readthedocs.io/)
+[![Ruff](https://img.shields.io/badge/Ruff-Latest-yellow?logo=python)](https://beta.ruff.rs/docs/)
+[![Documentation](https://img.shields.io/badge/Docs-MkDocs-blue?logo=markdown)](https://www.mkdocs.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## 📋 Requirements
+</div>
 
-- Python >=3.10 <3.13
-- [UV](https://docs.astral.sh/uv/) for dependency management
-- Ollama compatible system
+## Table of Contents
 
-## 🚀 Quick Start
+- [Overview](#-overview)
+- [Core Features](#-core-features)
+- [System Architecture](#-system-architecture)
+  - [Model Integration](#-model-integration)
+  - [Tool Integration](#-tools-integration)
+  - [Analytics Pipeline](#-performance-monitoring)
+- [Installation](#-quick-start)
+  - [Prerequisites](#-quick-start)
+  - [Quick Start](#-quick-start)
+  - [Docker Deployment](#-quick-start)
+- [Usage](#-usage)
+  - [Basic Usage](#-usage)
+  - [Advanced Configuration](#-configuration)
+  - [Model Selection](#-model-integration)
+- [Configuration](#-configuration)
+  - [Environment Variables](#-configuration)
+  - [Model Settings](#-configuration)
+  - [MLflow Setup](#-configuration)
+- [Development](#-contributing)
+  - [Code Quality](#-contributing)
+  - [Testing](#-contributing)
+  - [Documentation](#-documentation)
+- [Monitoring](#-performance-monitoring)
+  - [MLflow Dashboard](#-performance-monitoring)
+  - [Performance Metrics](#-performance-monitoring)
+  - [Alerting](#-performance-monitoring)
+- [Contributing](#-contributing)
+  - [Development Setup](#-contributing)
+  - [Pull Request Process](#-contributing)
+- [Support](#-support)
+  - [Documentation](#-documentation)
+  - [Community](#-support)
+  - [Professional Support](#-support)
+- [License](#-license)
+- [Acknowledgments](#-acknowledgments)
 
-1. **Install UV**:
+## Overview
 
-```bash
-pip install uv
+Cognitive Crew AI is an enterprise-grade framework for orchestrating multiple AI models with advanced analytics and monitoring capabilities. It supports Gemini Flash (1M context), LM Studio, and provides extensive tooling for development and deployment.
+
+## Core Features
+
+```mermaid
+mindmap
+  root((Cognitive Crew))
+    Models
+      Gemini Flash
+        1M Context Window
+        8K Output Tokens
+      LM Studio
+        Local Deployment
+        Embedding Support
+    Analytics
+      MLflow Integration
+      Real-time Monitoring
+      Performance Tracking
+    Tools
+      Web Search
+      Code Execution
+      Knowledge Base
+    Development
+      UV Package Manager
+      Docker Support
+      FastAPI Integration
 ```
 
-2. **Install Dependencies**:
+## Quick Start
 
 ```bash
+# Install using UV
 uv venv
 uv pip install -r requirements.txt
-```
 
-3. **Configure Environment**:
-
-```bash
+# Configure Environment
 cp .env.example .env
-# Edit .env with your settings
+
+# Start MLflow Server
+docker-compose up -d mlflow
+
+# Run System
+python -m src.ollama.main run
 ```
 
-4. **Run the System**:
+## Model Integration
 
-```bash
-python -m src.ollama.main run --topic "Your Analysis Topic"
-```
+| Model | Context | Output | Features |
+|-------|----------|---------|-----------|
+| Gemini Flash | 1M tokens | 8K tokens | Code, Search, Tools |
+| LM Studio | 4K tokens | 2K tokens | Local, Embeddings |
 
-### Start MLflow Dashboard
-
-```bash
-# Start MLflow UI with specific configuration
-mlflow ui --backend-store-uri postgresql://postgres:password@localhost:5432/mlflow_tracking --default-artifact-root ./mlflow-artifacts --host 127.0.0.1 --port 5000 --gunicorn-opts "--worker-class=gthread --threads=4 --timeout=120"
-```
-
-Access the dashboard at: `http://127.0.0.1:5000`
-
-## 🏗 System Architecture
+## System Architecture
 
 ```mermaid
 graph TD
@@ -190,15 +249,6 @@ graph TD
 - Performance Alerts
 - Resource Optimization
 - Trend Analysis
-
-## 📈 Latest Benchmarks
-
-```mermaid
-pie title System Performance
-    "Success Rate" : 95
-    "Validation Score" : 92
-    "Resource Efficiency" : 88
-```
 
 ## 🛠 Configuration
 

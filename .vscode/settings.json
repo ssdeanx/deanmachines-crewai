@@ -2,13 +2,19 @@
     "cSpell.words": [
         "crewai",
         "dotenv",
+        "genai",
+        "generativeai",
         "gthread",
         "gunicorn",
         "langchain",
         "levelname",
         "LMSTUDIO",
         "mlflow",
+        "multimodal",
         "ollama",
-        "pysbd"
+        "plotly",
+        "pysbd",
+        "SERPER",
+        "showlegend"
     ]
 }

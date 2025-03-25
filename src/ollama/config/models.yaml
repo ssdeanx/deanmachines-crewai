@@ -1,0 +1,148 @@
+gemini:
+  model_config:
+    name: ${GEMINI_MODEL}
+    temperature: 0.7
+    top_p: 0.95
+    max_tokens: 8192
+  agents:
+    researcher:
+      model_name: "gemini-pro"
+      temperature: 0.5
+    analyzer:
+      model_name: "gemini-pro"
+      temperature: 0.3
+    validator:
+      model_name: "gemini-pro"
+      temperature: 0.2
+
+lmstudio:
+  model_config:
+    name: ${LMSTUDIO_MODEL}
+    temperature: 0.7
+    top_p: 0.95
+    max_tokens: 2048
+    api_base: ${LMSTUDIO_API_URL}
+  agents:
+    researcher:
+      model_name: "gemma-3-4b-it"
+      temperature: 0.5
+    analyzer:
+      model_name: "gemma-3-4b-it"
+      temperature: 0.3
+    validator:
+      model_name: "gemma-3-4b-it"
+      temperature: 0.2
+
+ollama:
+  model_config:
+    name: ${OLLAMA_MODEL}
+    temperature: 0.7
+    top_p: 0.95
+    max_tokens: 2048
+  agents:
+    researcher:
+      model_name: "gemma:3b"
+      temperature: 0.5
+    analyzer:
+      model_name: "gemma:3b"
+      temperature: 0.3
+    validator:
+      model_name: "gemma:3b"
+      temperature: 0.2
+
+models:
+  gemini_flash:
+    name: "models/gemini-2.0-flash"
+    context_window: 1048576
+    max_tokens: 8192
+    settings:
+      temperature: 0.7
+      top_p: 0.95
+      presence_penalty: 0.0
+      frequency_penalty: 0.0
+    features:
+      - structured_output
+      - function_calling
+      - code_execution
+      - search
+      - tool_use
+      - thinking
+    experimental:
+      - image_generation
+      - live_api
+      - thinking
+
+  gemini_flash_lite:
+    name: "models/gemini-2.0-flash-lite"
+    context_window: 1048576
+    max_tokens: 8192
+    settings:
+      temperature: 0.6
+      top_p: 0.9
+      presence_penalty: 0.0
+      frequency_penalty: 0.0
+    features:
+      - structured_output
+      - function_calling
+      - code_execution
+      - search
+      - tool_use
+      - thinking
+    experimental:
+      - image_generation
+      - live_api
+      - thinking
+
+  lmstudio:
+    name: "${LMSTUDIO_MODEL}"
+    context_window: 4096
+    max_tokens: 2048
+    settings:
+      temperature: 0.7
+      top_p: 0.95
+      presence_penalty: 0.0
+      frequency_penalty: 0.0
+    api:
+      base_url: "${LMSTUDIO_API_URL}"
+      version: "v1"
+      endpoints:
+        chat: "/chat/completions"
+        completion: "/completions"
+        embedding: "/embeddings"
+
+  lmstudio_emb:
+    name: "text-embedding-nomic-embed-text-v1.5"
+    context_window: 4096
+    max_tokens: 2048
+    api:
+      base_url: "${LMSTUDIO_API_URL}"
+      version: "v1"
+      endpoint: "/embeddings"
+
+model_assignments:
+  default: "gemini_flash"
+  research:
+    primary: "gemini_flash"
+    fallback: "gemini_flash_lite"
+  analysis:
+    primary: "gemini_flash_lite"
+    fallback: "lmstudio"
+  code:
+    primary: "lmstudio"
+    fallback: "gemini_flash"
+  embedding:
+    primary: "lmstudio_emb"
+    fallback: null
+
+validation:
+  required_settings:
+    - temperature
+    - top_p
+    - max_tokens
+  required_features:
+    gemini:
+      - structured_output
+      - function_calling
+    lmstudio:
+      - chat
+      - completion

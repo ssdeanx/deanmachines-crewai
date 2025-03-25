@@ -313,75 +313,81 @@ class OllamaRunner:
             r.get("score", 0) for r in test_results["results"]
         ) / len(test_results["results"])
 
-def main():
+import argparse
+import os
+import logging
+from pathlib import Path
+from crews.model_crews import GeminiCrew, LMStudioCrew
+import mlflow
+
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+logger = logging.getLogger(__name__)
+
+def setup_mlflow():
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "postgresql://postgres:password@localhost:5432/mlflow_tracking")
+    mlflow.set_tracking_uri(tracking_uri)
+    logger.info(f"MLflow tracking URI: {tracking_uri}")
+
+def run_crew(model_type: str, topic: str):
     try:
-        parser = argparse.ArgumentParser(description="Run the Structured Thinking Crew")
-        parser.add_argument("--topic", default="Prompt Engineering", help="Topic to focus on")
-        parser.add_argument("--output-dir", default="./outputs", help="Output directory")
-        parser.add_argument("--mode", choices=["run", "train", "test"], default="run", help="Operation mode")
-        parser.add_argument("--analysis-depth", default="detailed", choices=["basic", "detailed", "comprehensive"])
-        parser.add_argument("--branch-depth", type=int, default=3, help="Depth of branching analysis")
-        parser.add_argument("--validation-level", default="normal", choices=["strict", "normal", "relaxed"])
-        parser.add_argument("--parallel", action="store_true", help="Enable parallel processing")
-        parser.add_argument("--max-workers", type=int, default=3, help="Maximum number of parallel workers")
+        # Set up MLflow tracking
+        setup_mlflow()
+        experiment_name = f"{model_type}_crew_monitoring"
+        mlflow.set_experiment(experiment_name)
 
-        args = parser.parse_args()
+        # Initialize appropriate crew
+        if model_type == "gemini":
+            crew = GeminiCrew(topic=topic)
+        elif model_type == "lmstudio":
+            crew = LMStudioCrew(topic=topic)
+        else:
+            raise ValueError(f"Unsupported model type: {model_type}")
 
-        # Validate output directory
-        output_dir = Path(args.output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
+        # Run analysis with MLflow tracking
+        with mlflow.start_run():
+            logger.info(f"Starting {model_type} crew analysis for topic: {topic}")
+            result = crew.run()
 
-        # Initialize logging
-        setup_logging(output_dir)
+            # Log metrics
+            mlflow.log_params({
+                "model_type": model_type,
+                "topic": topic
+            })
+            if isinstance(result, dict) and "error" not in result:
+                mlflow.log_metric("success", 1)
+            else:
+                mlflow.log_metric("success", 0)
 
-        runner = OllamaRunner(
-            topic=args.topic,
-            output_dir=str(output_dir),
-            analysis_depth=args.analysis_depth,
-            branch_depth=args.branch_depth,
-            validation_level=args.validation_level
-        )
-
-        if not runner.validate_configuration():
-            raise ValueError("Invalid configuration")
-
-        result = None
-        if args.mode == "run":
-            result = runner.run()
-        elif args.mode == "train":
-            result = runner.train(
-                n_iterations=3,
-                filename="training_results.json",
-                max_workers=args.max_workers if args.parallel else 1
-            )
-        elif args.mode == "test":
-            result = runner.test(n_iterations=3, model_name="gemma")
-
-        logger.info(f"Execution completed successfully in {args.mode} mode!")
-
-        # Save final results
-        results_file = output_dir / f"results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        with open(results_file, 'w') as f:
-            json.dump(result, f, indent=2)
-
-        print(json.dumps(result, indent=2))
-        return 0
+            return result
 
     except Exception as e:
-        logger.error(f"Execution failed: {str(e)}", exc_info=True)
-        return 1
+        logger.error(f"Error running {model_type} crew: {str(e)}")
+        raise
 
-def setup_logging(output_dir: Path) -> None:
-    """Setup logging configuration"""
-    log_file = output_dir / f"ollama_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler(sys.stdout)
-        ]
+def main():
+    parser = argparse.ArgumentParser(description="Run AI analysis with different models")
+    parser.add_argument(
+        "--model",
+        choices=["gemini", "lmstudio"],
+        default=os.getenv("DEFAULT_MODEL", "gemini"),
+        help="Model type to use for analysis"
+    )
+    parser.add_argument(
+        "--topic",
+        type=str,
+        default="AI and machine learning",
+        help="Topic to analyze"
     )
 
+    args = parser.parse_args()
+
+    try:
+        result = run_crew(args.model, args.topic)
+        logger.info("Analysis completed successfully")
+        return result
+    except Exception as e:
+        logger.error(f"Analysis failed: {str(e)}")
+        return None
+
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

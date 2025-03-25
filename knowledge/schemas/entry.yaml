@@ -1,0 +1,112 @@
+type: object
+required:
+  - id
+  - name
+  - category
+  - description
+properties:
+  id:
+    type: string
+    pattern: ^[a-z0-9-_]+$
+  name:
+    type: string
+    minLength: 3
+  category:
+    type: string
+    enum:
+      - prompt-templates
+      - model-specific
+      - domain-knowledge
+      - best-practices
+  description:
+    type: string
+    minLength: 10
+  variables:
+    type: array
+    items:
+      type: object
+      required:
+        - name
+        - description
+        - type
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum:
+            - text
+            - number
+            - choice
+            - array
+            - object
+        default:
+          type: [string, number, array, object, "null"]
+  effectiveness_score:
+    type: number
+    minimum: 0
+    maximum: 100
+  use_cases:
+    type: array
+    items:
+      type: string
+  limitations:
+    type: array
+    items:
+      type: string
+  model_compatibility:
+    type: array
+    items:
+      type: string
+      enum:
+        - gemini
+        - llama
+        - mistral
+  agent_config:
+    type: object
+    properties:
+      temperature:
+        type: number
+        minimum: 0
+        maximum: 1
+      max_iterations:
+        type: integer
+        minimum: 1
+      tools:
+        type: array
+        items:
+          type: string
+  metadata:
+    type: object
+    properties:
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+      version:
+        type: string
+      author:
+        type: string
+      tags:
+        type: array
+        items:
+          type: string
+  relationships:
+    type: object
+    properties:
+      dependencies:
+        type: array
+        items:
+          type: string
+      related_entries:
+        type: array
+        items:
+          type: string
+      parent_category:
+        type: string
+      subcategory:
+        type: string

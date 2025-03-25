@@ -17,6 +17,25 @@ dashboard:
       - "validation_score"
       - "success_rate"
     view_state_key: "3894e7dac091113a949e1a0b144bdfbf23f857b1cfb2b6251e919052fe25b155"  # From your URL
+  model_tracking:
+    gemini:
+      experiment_name: "gemini_crew_monitoring"
+      model_name: ${GEMINI_MODEL}
+    lmstudio:
+      experiment_name: "lmstudio_crew_monitoring"
+      model_name: ${LMSTUDIO_MODEL}
+    ollama:
+      experiment_name: "ollama_crew_monitoring"
+      model_name: ${OLLAMA_MODEL}
+
+  compare_models:
+    enabled: true
+    metrics:
+      - "execution_time"
+      - "memory_usage"
+      - "validation_score"
+      - "success_rate"
+    grouping: "model_name"
 
 metrics:
   validation:
@@ -58,6 +77,19 @@ metrics:
       warning_threshold: 0.90
       critical_threshold: 0.85
       plot_type: "line"
+      compare_runs: true
+  model_specific:
+    - name: "model_latency"
+      unit: "milliseconds"
+      warning_threshold: 1000
+      critical_threshold: 5000
+      plot_type: "line"
+      compare_runs: true
+    - name: "token_usage"
+      unit: "count"
+      warning_threshold: 8000
+      critical_threshold: 15000
+      plot_type: "bar"
       compare_runs: true
 
 visualization:

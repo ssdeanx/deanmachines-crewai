@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates>
+    <multimodal_analysis>
+        <image_analysis>
+            <template><![CDATA[
+                Analyze the following image content:
+                {image_content}
+                Provide analysis considering:
+                - Visual elements
+                - Technical patterns
+                - Context interpretation
+                - Related concepts
+            ]]></template>
+            <parameters>
+                <format>image/*, video/*, application/pdf</format>
+                <max_size>20971520</max_size>
+                <supported_types>png,jpg,jpeg,gif,pdf,mp4</supported_types>
+            </parameters>
+        </image_analysis>
+
+        <video_analysis>
+            <template><![CDATA[
+                Analyze video content frame by frame:
+                {video_content}
+                Focus on:
+                - Temporal patterns
+                - Motion analysis
+                - Scene understanding
+                - Technical details
+            ]]></template>
+            <parameters>
+                <max_duration>300</max_duration>
+                <frame_rate>30</frame_rate>
+                <formats>mp4,mov,avi</formats>
+            </parameters>
+        </video_analysis>
+
+        <audio_analysis>
+            <template><![CDATA[
+                Process audio input:
+                {audio_content}
+                Analyze:
+                - Audio patterns
+                - Signal characteristics
+                - Content interpretation
+            ]]></template>
+            <parameters>
+                <formats>mp3,wav,ogg</formats>
+                <max_duration>600</max_duration>
+                <sample_rate>44100</sample_rate>
+            </parameters>
+        </audio_analysis>
+
+        <diagram_understanding>
+            <template><![CDATA[
+                Interpret diagram content:
+                {diagram_content}
+                Extract:
+                - Structure relationships
+                - Flow patterns
+                - Technical components
+                - Implementation insights
+            ]]></template>
+            <parameters>
+                <diagram_types>flowchart,uml,er,sequence</diagram_types>
+                <output_format>json,xml,markdown</output_format>
+            </parameters>
+        </diagram_understanding>
+    </multimodal_analysis>
+</templates>

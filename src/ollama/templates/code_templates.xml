@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates>
+    <code_execution>
+        <template>
+            <![CDATA[
+            Execute and analyze the following code:
+            {code}
+            Consider these aspects:
+            - Code correctness
+            - Performance implications
+            - Security considerations
+            - Best practices
+            ]]>
+        </template>
+        <validation>
+            <criteria>
+                <security>Check for security vulnerabilities</security>
+                <performance>Analyze computational efficiency</performance>
+                <quality>Evaluate code quality and style</quality>
+            </criteria>
+        </validation>
+    </code_execution>
+
+    <vision_analysis>
+        <template>
+            <![CDATA[
+            Analyze the code or diagram in this image:
+            {image_context}
+            Focus on:
+            - Code structure
+            - Design patterns
+            - Flow logic
+            - Implementation details
+            ]]>
+        </template>
+        <output_format>
+            <structure>
+                <code_elements>List of identified code elements</code_elements>
+                <patterns>Detected design patterns</patterns>
+                <flow>Control flow analysis</flow>
+                <recommendations>Improvement suggestions</recommendations>
+            </structure>
+        </output_format>
+    </vision_analysis>
+
+    <code_generation>
+        <template>
+            <![CDATA[
+            Generate code based on the following requirements:
+            {requirements}
+            Use these parameters:
+            - Language: {language}
+            - Style: {style}
+            - Constraints: {constraints}
+            ]]>
+        </template>
+        <parameters>
+            <language type="choice">python,javascript,typescript,go</language>
+            <style type="choice">functional,object-oriented,procedural</style>
+            <constraints type="object">
+                <max_complexity>specified maximum cyclomatic complexity</max_complexity>
+                <patterns>required design patterns</patterns>
+                <testing>testing requirements</testing>
+            </constraints>
+        </parameters>
+    </code_generation>
+</templates>

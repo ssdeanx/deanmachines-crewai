@@ -5,9 +5,9 @@ from pathlib import Path
 import os
 from typing import Dict, List, Optional
 from .tools.custom_tool import (
-    FileOutputTool, 
-    MarkdownFormatter, 
-    PromptTemplateLibrary, 
+    FileOutputTool,
+    MarkdownFormatter,
+    PromptTemplateLibrary,
     PromptTestingTool,
     StructuredThinkingTool,
     BranchAnalysisTool
@@ -22,10 +22,10 @@ with open(config_dir / "agents.yaml", "r") as f:
 with open(config_dir / "tasks.yaml", "r") as f:
     tasks_config = yaml.safe_load(f)
 
-class OllamaCrew:
+class BaseCrew:
     def __init__(
-        self, 
-        topic: str = "AI and machine learning", 
+        self,
+        topic: str = "AI and machine learning",
         output_dir: str = "./outputs",
         analysis_depth: str = "detailed",
         branch_depth: int = 3
@@ -70,13 +70,13 @@ class OllamaCrew:
         for name, config in agents_config.items():
             if config.get("base_config", False):
                 continue
-            
+
             # Format configuration variables
             formatted_config = self._format_agent_variables(config)
-            
+
             # Initialize tools based on the agent
             tools = self._get_agent_tools(formatted_config)
-            
+
             self.agents[name] = Agent(
                 role=formatted_config["role"],
                 goal=formatted_config["goal"],
@@ -86,7 +86,7 @@ class OllamaCrew:
                 tools=tools,
                 temperature=formatted_config.get("temperature", 0.7)
             )
-        
+
         return self.agents
 
     def _get_agent_tools(self, config: Dict) -> List:
@@ -127,24 +127,24 @@ class OllamaCrew:
         """Create tasks based on the configuration"""
         if not self.agents:
             self.get_agents()
-        
+
         for name, config in tasks_config.items():
             if name.startswith("task_templates"):
                 continue
-            
+
             # Format task configuration
             formatted_config = self._format_task_variables(config)
-            
+
             # Get the agent for this task
             agent = self.agents[formatted_config["agent"]]
-            
+
             # Set up task dependencies
             depends_on = []
             if "depends_on" in formatted_config:
                 for dep in formatted_config["depends_on"]:
                     if dep in self.tasks:
                         depends_on.append(self.tasks[dep])
-            
+
             # Create task with additional context
             self.tasks[name] = Task(
                 description=formatted_config["description"],
@@ -154,7 +154,7 @@ class OllamaCrew:
                 context=formatted_config.get("context", {}),
                 tools=self._get_agent_tools(formatted_config.get("agent_config", {}))
             )
-        
+
         return list(self.tasks.values())
 
     def add_context(self, context: Dict) -> None:
@@ -169,10 +169,10 @@ class OllamaCrew:
             verbose=2,
             process=process_type
         )
-        
+
         try:
             result = crew.kickoff()
-            
+
             # Save results using FileOutputTool
             output_tool = self.tools["file_output_tool"]
             output_tool._execute(
@@ -186,9 +186,36 @@ class OllamaCrew:
                     "timestamp": str(datetime.now())
                 }
             )
-            
+
             return result
-            
+
         except Exception as e:
             print(f"Error during crew execution: {str(e)}")
             return {"error": str(e), "status": "failed"}
+
+class OllamaCrew(BaseCrew):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ollama-specific initialization here
+
+class GeminiCrew(BaseCrew):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-pro")
+        self.api_key = os.getenv("GEMINI_API_KEY")
+
+    def _initialize_tools(self) -> Dict:
+        tools = super()._initialize_tools()
+        # Add Gemini-specific tools here if needed
+        return tools
+
+class LMStudioCrew(BaseCrew):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.api_url = os.getenv("LMSTUDIO_API_URL", "http://localhost:1234")
+        self.model_name = os.getenv("LMSTUDIO_MODEL", "gemma-3-4b-it")
+
+    def _initialize_tools(self) -> Dict:
+        tools = super()._initialize_tools()
+        # Add LMStudio-specific tools here if needed
+        return tools
