@@ -52,6 +52,20 @@ cp .env.example .env
 python -m src.ollama.main run --topic "Your Analysis Topic"
 ```
 
+### Start MLflow Dashboard
+
+```bash
+# Start MLflow UI with specific configuration
+mlflow ui \
+  --backend-store-uri sqlite:///mlflow.db \
+  --default-artifact-root ./mlflow-artifacts \
+  --host 127.0.0.1 \
+  --port 5000 \
+  --gunicorn-opts "--worker-class=gthread --threads=4 --timeout=120"
+```
+
+Access the dashboard at: http://127.0.0.1:5000
+
 ## 🏗 System Architecture
 
 ```mermaid

@@ -1,42 +1,124 @@
 dashboard:
   experiment_name: "ollama_crew_monitoring"
+  experiment_id: "628510843323994625"  # From your URL
   tracking_uri: "sqlite:///mlflow.db"
   artifacts_path: "./mlflow-artifacts"
-  
+  ui:
+    port: 5000
+    host: "127.0.0.1"
+    default_view: "TABLE"
+  auto_log: true
+  log_system_metrics: true
+  compare_runs:
+    enabled: true
+    default_metrics:
+      - "execution_time"
+      - "memory_usage"
+      - "validation_score"
+      - "success_rate"
+    view_state_key: "3894e7dac091113a949e1a0b144bdfbf23f857b1cfb2b6251e919052fe25b155"  # From your URL
+
 metrics:
   validation:
     - name: "validation_score"
       threshold: 0.8
+      warning_threshold: 0.6
+      critical_threshold: 0.4
+      plot_type: "line"
+      compare_runs: true
     - name: "error_count"
       threshold: 5
+      warning_threshold: 10
+      critical_threshold: 20
+      plot_type: "bar"
+      compare_runs: true
     - name: "structure_violations"
       threshold: 2
-      
+      warning_threshold: 5
+      critical_threshold: 10
+      plot_type: "bar"
+      compare_runs: true
+
   performance:
     - name: "execution_time"
       unit: "seconds"
       warning_threshold: 10.0
       error_threshold: 30.0
+      plot_type: "line"
+      compare_runs: true
     - name: "memory_usage"
       unit: "MB"
       warning_threshold: 500
       error_threshold: 1000
+      plot_type: "line"
+      compare_runs: true
     - name: "success_rate"
       unit: "percentage"
       minimum_threshold: 0.95
+      warning_threshold: 0.90
+      critical_threshold: 0.85
+      plot_type: "line"
+      compare_runs: true
 
 visualization:
   default_theme: "plotly_dark"
   refresh_interval: 60  # seconds
   retention_period: 30  # days
-  
+  default_view: "TABLE"  # Matches your URL
+  charts:
+    - type: "timeline"
+      metrics: ["execution_time", "memory_usage", "success_rate"]
+      layout:
+        height: 400
+        title: "Performance Timeline"
+    - type: "comparison"
+      metrics: ["validation_score", "error_count", "structure_violations"]
+      layout:
+        height: 400
+        title: "Validation Metrics Comparison"
+    - type: "distribution"
+      metrics: ["execution_time", "memory_usage"]
+      layout:
+        height: 400
+        title: "Resource Usage Distribution"
+
 alerts:
   enabled: true
   channels:
     - type: "logging"
       level: "WARNING"
+      format: "%(asctime)s - %(levelname)s - %(message)s"
     - type: "email"
       recipients: ["admin@example.com"]
+      on_critical: true
+      on_warning: false
   thresholds:
     critical_error_count: 5
     performance_degradation: 0.2
+    memory_spike: 1.5  # ratio to average
+  aggregation_window: "1h"
+  cooldown_period: "15m"
+
+runs:
+  compare:
+    enabled: true
+    max_runs: 10
+    default_metrics:
+      - "execution_time"
+      - "memory_usage"
+      - "validation_score"
+    sort_key: "start_time"
+    sort_order: "desc"
+  artifacts:
+    save_plots: true
+    save_metrics: true
+    retention_days: 30
+
+api:
+  base_url: "http://127.0.0.1:5000"
+  endpoints:
+    experiments: "/api/2.0/mlflow/experiments"
+    runs: "/api/2.0/mlflow/runs"
+    metrics: "/api/2.0/mlflow/metrics"
+  headers:
+    Content-Type: "application/json"
