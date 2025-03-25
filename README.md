@@ -56,15 +56,10 @@ python -m src.ollama.main run --topic "Your Analysis Topic"
 
 ```bash
 # Start MLflow UI with specific configuration
-mlflow ui \
-  --backend-store-uri sqlite:///mlflow.db \
-  --default-artifact-root ./mlflow-artifacts \
-  --host 127.0.0.1 \
-  --port 5000 \
-  --gunicorn-opts "--worker-class=gthread --threads=4 --timeout=120"
+mlflow ui --backend-store-uri postgresql://postgres:password@localhost:5432/mlflow_tracking --default-artifact-root ./mlflow-artifacts --host 127.0.0.1 --port 5000 --gunicorn-opts "--worker-class=gthread --threads=4 --timeout=120"
 ```
 
-Access the dashboard at: http://127.0.0.1:5000
+Access the dashboard at: `http://127.0.0.1:5000`
 
 ## 🏗 System Architecture
 
@@ -135,15 +130,15 @@ graph LR
     A[Current: v2.0.0] --> B[v2.1.0: Enhanced Analysis]
     B --> C[v2.2.0: Advanced Integration]
     C --> D[v3.0.0: Enterprise Features]
-    
+
     subgraph "Q2 2024"
     B
     end
-    
+
     subgraph "Q3 2024"
     C
     end
-    
+
     subgraph "Q4 2024"
     D
     end
@@ -262,3 +257,65 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📋 Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for version history and updates.
+
+```mermaid
+graph TD
+    subgraph "Model Coordination Layer"
+        geminiCoord[Gemini Coordinator]
+        lmCoord[LMStudio Coordinator]
+        ollamaCoord[Ollama Coordinator]
+        crewInterface[Common Crew Interface]
+    end
+
+    subgraph "Knowledge Management"
+        knowledgeManager[Knowledge Manager]
+        indexStore[Index Store]
+        categoryManager[Category Manager]
+        entryManager[Entry Manager]
+    end
+
+    subgraph "MLflow Monitoring"
+        mlflowDashboard[MLflow Dashboard]
+        metricTracker[Metric Tracking]
+        experimentManager[Experiment Manager]
+    end
+
+    subgraph "Tools Integration"
+        langchainTools[LangChain Tools]
+        customTools[Custom Tools]
+        formatterTools[Formatter Tools]
+        searchTools[Search Tools]
+    end
+
+    subgraph "Core Processing"
+        structuredThinking[Structured Thinking]
+        branchAnalysis[Branch Analysis]
+        researchAnalysis[Research Analysis]
+    end
+
+    %% Verified connections from code
+    ollamaCoord --> crewInterface
+    crewInterface --> customTools
+    knowledgeManager --> indexStore
+    knowledgeManager --> categoryManager
+    knowledgeManager --> entryManager
+    mlflowDashboard --> metricTracker
+    mlflowDashboard --> experimentManager
+    langchainTools --> structuredThinking
+    langchainTools --> branchAnalysis
+    langchainTools --> researchAnalysis
+    customTools --> formatterTools
+    customTools --> searchTools
+
+    %% MLflow connections from config
+    ollamaCoord --> mlflowDashboard
+    mlflowDashboard --> metricTracker
+
+    %% Knowledge management connections from implementation
+    ollamaCoord --> knowledgeManager
+    knowledgeManager --> indexStore
+
+    %% Tool integration connections from directory structure
+    crewInterface --> langchainTools
+    crewInterface --> customTools
+```

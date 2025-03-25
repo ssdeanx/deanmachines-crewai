@@ -2,6 +2,9 @@
     "cSpell.words": [
         "crewai",
         "dotenv",
+        "gthread",
+        "gunicorn",
+        "langchain",
         "levelname",
         "LMSTUDIO",
         "mlflow",
