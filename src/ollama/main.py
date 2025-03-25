@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Union
 from concurrent.futures import ThreadPoolExecutor  # Add for parallel processing
 import time
 from functools import wraps
-from src.ollama.monitoring.mlflow_dashboard import MLflowDashboard
+from src.ollama.utils.mlflow_dashboard import MLflowDashboard
 import yaml
 
 from src import ollama
@@ -46,7 +46,7 @@ class PerformanceMonitor:
             "error_rates": [],
             "validation_scores": []
         }
-        
+
     def track_execution(self, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -79,11 +79,11 @@ class OllamaRunner:
         self.validation_level = validation_level
         self.crew = None
         self.setup_environment()
-        
+
         # Initialize MLflow dashboard
         with open(Path(__file__).parent / "config" / "mlflow_config.yaml", "r") as f:
             mlflow_config = yaml.safe_load(f)
-        
+
         self.dashboard = MLflowDashboard(
             experiment_name=mlflow_config["dashboard"]["experiment_name"],
             tracking_uri=mlflow_config["dashboard"]["tracking_uri"],
@@ -110,7 +110,7 @@ class OllamaRunner:
         inputs = self.get_default_inputs()
         if custom_inputs:
             inputs.update(custom_inputs)
-        
+
         self.crew = OllamaCrew(
             topic=inputs["topic"],
             output_dir=str(self.output_dir),
@@ -142,14 +142,14 @@ class OllamaRunner:
                 run_name=f"analysis_{self.topic.lower().replace(' ', '_')}",
                 tags={"topic": self.topic, "depth": self.analysis_depth}
             )
-            
+
             self.initialize_crew(custom_inputs)
             logger.info("Starting crew execution")
-            
+
             start_time = time.time()
             result = self.crew.run()
             execution_time = time.time() - start_time
-            
+
             # Log enhanced metrics
             self.dashboard.log_performance_data(
                 execution_time=execution_time,
@@ -157,13 +157,13 @@ class OllamaRunner:
                 success_rate=1.0 if result.get("status") != "failed" else 0.0,
                 complexity_score=result.get("complexity_score", 0.0)
             )
-            
+
             if "validation" in result:
                 self.dashboard.log_validation_results(result["validation"])
-            
+
             self._save_execution_metadata(result)
             self.dashboard.end_run()
-            
+
             return {
                 **result,
                 "execution_metrics": {
@@ -172,7 +172,7 @@ class OllamaRunner:
                     "validation_level": self.validation_level
                 }
             }
-            
+
         except Exception as e:
             logger.error(f"Error during crew execution: {str(e)}")
             if hasattr(self, 'dashboard'):
@@ -185,14 +185,14 @@ class OllamaRunner:
         try:
             self.initialize_crew(custom_inputs)
             logger.info(f"Starting crew training for {n_iterations} iterations")
-            
+
             results = []
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 future_to_iteration = {
-                    executor.submit(self._run_training_iteration, i): i 
+                    executor.submit(self._run_training_iteration, i): i
                     for i in range(n_iterations)
                 }
-                
+
                 for future in future_to_iteration:
                     try:
                         result = future.result()
@@ -200,11 +200,11 @@ class OllamaRunner:
                         logger.info(f"Completed iteration {future_to_iteration[future]+1}/{n_iterations}")
                     except Exception as e:
                         logger.error(f"Error in iteration {future_to_iteration[future]+1}: {str(e)}")
-            
+
             # Save and analyze results
             self._save_training_results(results, filename)
             analysis = self._analyze_training_results(results)
-            
+
             return {
                 "iterations": n_iterations,
                 "results": results,
@@ -254,7 +254,7 @@ class OllamaRunner:
         try:
             self.initialize_crew(custom_inputs)
             logger.info(f"Starting crew testing with {model_name}")
-            
+
             test_results = {
                 "model": model_name,
                 "iterations": n_iterations,
@@ -265,15 +265,15 @@ class OllamaRunner:
                     "validation_stats": {}
                 }
             }
-            
+
             for i in range(n_iterations):
                 logger.info(f"Test iteration {i+1}/{n_iterations}")
                 result = self.crew.run()
                 test_results["results"].append(result)
-            
+
             self._calculate_test_metrics(test_results)
             self._save_test_results(test_results)
-            
+
             return test_results
         except Exception as e:
             logger.error(f"Error during testing: {str(e)}")
@@ -324,7 +324,7 @@ def main():
         parser.add_argument("--validation-level", default="normal", choices=["strict", "normal", "relaxed"])
         parser.add_argument("--parallel", action="store_true", help="Enable parallel processing")
         parser.add_argument("--max-workers", type=int, default=3, help="Maximum number of parallel workers")
-        
+
         args = parser.parse_args()
 
         # Validate output directory
@@ -341,7 +341,7 @@ def main():
             branch_depth=args.branch_depth,
             validation_level=args.validation_level
         )
-        
+
         if not runner.validate_configuration():
             raise ValueError("Invalid configuration")
 
@@ -350,23 +350,23 @@ def main():
             result = runner.run()
         elif args.mode == "train":
             result = runner.train(
-                n_iterations=3, 
+                n_iterations=3,
                 filename="training_results.json",
                 max_workers=args.max_workers if args.parallel else 1
             )
         elif args.mode == "test":
             result = runner.test(n_iterations=3, model_name="gemma")
-        
+
         logger.info(f"Execution completed successfully in {args.mode} mode!")
-        
+
         # Save final results
         results_file = output_dir / f"results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(results_file, 'w') as f:
             json.dump(result, f, indent=2)
-        
+
         print(json.dumps(result, indent=2))
         return 0
-        
+
     except Exception as e:
         logger.error(f"Execution failed: {str(e)}", exc_info=True)
         return 1
