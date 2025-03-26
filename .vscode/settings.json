@@ -10,11 +10,17 @@
         "levelname",
         "LMSTUDIO",
         "mlflow",
+        "mlruns",
         "multimodal",
         "ollama",
         "plotly",
+        "pyproject",
         "pysbd",
+        "Serp",
         "SERPER",
         "showlegend"
-    ]
+    ],
+    "github.copilot.advanced": {
+
+    }
 }

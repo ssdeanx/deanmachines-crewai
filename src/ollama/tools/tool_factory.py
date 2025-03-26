@@ -1,100 +1,69 @@
-from typing import Dict, List
+"""
+Simplified ToolFactory for test harnesses.
+This provides basic tool creation functionality needed for multi-agent testing.
+"""
 import os
-import yaml
-from pathlib import Path
-from .agent_tools import (
-    WebSearchTool,
-    FileAnalyzerTool,
-    KnowledgeBaseTool,
-    StructuredAnalysisTool,
-    ValidationTool,
-    InsightGeneratorTool
-)
-from .advanced_tools import (
-    AdvancedReasoningTool,
-    MultimodalAnalysisTool,
-    ThinkingModeTool,
-    ToolUseTool
-)
-from .generation_tools import (
-    CodeGenerationTool,
-    ImageGenerationTool,
-    AudioGenerationTool
-)
+import logging
+from typing import Optional, Any
+from langchain.tools import Tool
 
 class ToolFactory:
+    """
+    A simplified factory for creating tools used in test harnesses.
+    Currently supports only the 'web_search' tool using SerperDev.
+    """
+
     def __init__(self):
-        self.config = self._load_config()
-        self.tools = {}
-        self.thinking_mode = os.getenv("GEMINI_THINKING_MODE", "enhanced")
+        """Initialize the ToolFactory with basic configuration."""
+        self.logger = logging.getLogger(__name__)
+        self.available_tools = {
+            "web_search": self._create_web_search_tool
+        }
 
-    def _load_config(self) -> Dict:
-        config_path = Path(__file__).parent.parent / "config" / "tools.yaml"
-        with open(config_path) as f:
-            return yaml.safe_load(f)
+    def get_tool(self, name: str) -> Optional[Any]:
+        """
+        Get a tool instance by name.
 
-    def get_tool(self, tool_name: str):
-        if tool_name in self.tools:
-            return self.tools[tool_name]
+        Args:
+            name: The name of the tool to retrieve
 
-        config = self.config.get(tool_name)
-        if not config:
-            raise ValueError(f"Tool not found: {tool_name}")
+        Returns:
+            The tool instance if available, otherwise raises KeyError
 
-        tool = self._create_tool(tool_name, config)
-        self.tools[tool_name] = tool
-        return tool
+        Raises:
+            KeyError: If the tool name is not recognized
+            Exception: If tool creation fails due to missing dependencies or API keys
+        """
+        if name not in self.available_tools:
+            raise KeyError(f"Tool '{name}' not found. Available tools: {list(self.available_tools.keys())}")
 
-    def _create_tool(self, name: str, config: Dict):
-        # Basic tools
-        if name == "web_search":
-            return WebSearchTool(
-                api_key=os.getenv("SERPER_API_KEY"),
-                max_results=config["args"]["max_results"]
-            )
-        elif name == "file_analyzer":
-            return FileAnalyzerTool(
-                supported_formats=config["args"]["supported_formats"],
-                max_file_size=config["args"]["max_file_size"]
-            )
-        elif name == "knowledge_base":
-            return KnowledgeBaseTool(
-                base_path=config["args"]["base_path"],
-                index_type=config["args"]["index_type"]
-            )
-        elif name == "structured_analysis":
-            return StructuredAnalysisTool(
-                formats=config["args"]["formats"],
-                validation=config["args"]["validation"]
-            )
-        elif name == "validation_tool":
-            return ValidationTool(
-                criteria=config["args"]["criteria"],
-                threshold=config["args"]["threshold"]
-            )
-        elif name == "insight_generator":
-            return InsightGeneratorTool(
-                formats=config["args"]["formats"],
-                max_insights=config["args"]["max_insights"],
-                min_confidence=config["args"]["min_confidence"]
-            )
-        # Generation tools
-        elif name == "code_generation":
-            return CodeGenerationTool()
-        elif name == "image_generation":
-            return ImageGenerationTool()
-        elif name == "audio_generation":
-            return AudioGenerationTool()
-        # Advanced Gemini 2.5 tools
-        elif name == "advanced_reasoning":
-            return AdvancedReasoningTool()
-        elif name == "multimodal_analysis":
-            return MultimodalAnalysisTool()
-        elif name == "thinking_mode":
-            return ThinkingModeTool(mode=self.thinking_mode)
-        elif name == "tool_use":
-            return ToolUseTool()
-        raise ValueError(f"Unknown tool type: {name}")
+        return self.available_tools[name]()
 
-    def get_tools_for_agent(self, tool_names: List[str]):
-        return [self.get_tool(name) for name in tool_names]
+    def _create_web_search_tool(self) -> Any:
+        """
+        Create a web search tool using the Serper API.
+
+        Returns:
+            A web search tool instance
+
+        Raises:
+            Exception: If SERPER_API_KEY is not set or other initialization fails
+        """
+        serper_api_key = os.getenv("SERPER_API_KEY")
+        if not serper_api_key:
+            raise ValueError("SERPER_API_KEY environment variable not set")
+
+        try:
+            from langchain.utilities import SerpAPIWrapper
+
+            search = SerpAPIWrapper(serpapi_api_key=serper_api_key)
+
+            return Tool(
+                name="web_search",
+                description="Search the web for information on a topic. Use this when you need current or factual information.",
+                func=search.run
+            )
+        except ImportError as e:
+            raise Exception(f"Failed to create web_search tool. Dependency error: {e}")
+        except Exception as e:
+            raise Exception(f"Failed to create web_search tool: {e}")
