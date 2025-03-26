@@ -2,6 +2,7 @@ from typing import Dict, List, Optional, Any
 from .manager import KnowledgeManager
 import logging
 from pathlib import Path
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -100,3 +101,9 @@ class KnowledgeIntegration:
             return []
 
         return capabilities.get("optimization_tips", [])
+
+    def get_latest_index_file(self, index_files: List[Path]) -> Dict:
+        """Get the latest index file based on modification time"""
+        latest = max(index_files, key=lambda x: x.stat().st_mtime)
+        with open(latest) as f:
+            return json.load(f)

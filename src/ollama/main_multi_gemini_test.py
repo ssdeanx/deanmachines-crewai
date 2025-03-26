@@ -20,15 +20,10 @@ logger = logging.getLogger(__name__)
 
 def setup_mlflow() -> bool:
     """
-    Set up MLflow tracking with PostgreSQL backend.
+    Set up MLflow tracking with PostgreSQL backend and configure LangChain autologging.
 
     Returns:
         bool: True if setup was successful, False otherwise
-
-    Notes:
-        Expects MLFLOW_TRACKING_URI environment variable to point
-        to a valid PostgreSQL connection string:
-        postgresql://user:pass@host:port/db
     """
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
     if not tracking_uri:
@@ -37,14 +32,32 @@ def setup_mlflow() -> bool:
         return False
 
     try:
+        # First set the tracking URI
         mlflow.set_tracking_uri(tracking_uri)
         logger.info(f"MLflow tracking URI set to: {tracking_uri}")
 
-        # Create or get the experiment
+        # Set experiment by name
         experiment_name = "Simple_Gemini_Test"
         mlflow.set_experiment(experiment_name)
-        logger.info(f"MLflow experiment set to: {experiment_name}")
+
+        # Verify we can access the experiment
+        experiment = mlflow.get_experiment_by_name(experiment_name)
+        if not experiment:
+            logger.error(f"Failed to create or access experiment: {experiment_name}")
+            return False
+
+        logger.info(f"Using experiment: {experiment_name} (ID: {experiment.experiment_id})")
+
+        # Enable LangChain autologging
+        try:
+            mlflow.langchain.autolog()
+            logger.info("MLflow LangChain autologging enabled")
+        except Exception as e:
+            logger.warning(f"Failed to enable LangChain autologging: {e}")
+            # Continue even if autologging setup fails
+
         return True
+
     except Exception as e:
         logger.error(f"Failed to set up MLflow: {e}")
         return False
@@ -61,6 +74,10 @@ def save_result_snippet(result: str, max_length: int = 500) -> str:
         The snippet text
     """
     try:
+        if not result:
+            logger.warning("Empty result provided to save_result_snippet")
+            return ""
+
         snippet = result[:max_length] + "..." if len(result) > max_length else result
         mlflow.log_text(snippet, "final_result_snippet.txt")
         logger.info("Successfully saved result snippet to MLflow")
@@ -80,6 +97,10 @@ def save_full_report(result: str) -> bool:
         bool: True if saving was successful, False otherwise
     """
     try:
+        if not result:
+            logger.warning("Empty result provided to save_full_report")
+            return False
+
         # Create reports directory if it doesn't exist
         reports_dir = Path("reports")
         reports_dir.mkdir(exist_ok=True)
@@ -116,7 +137,7 @@ def main() -> Optional[str]:
     # Topic to analyze
     topic = "climate change impacts on agriculture"
 
-    # Set up MLflow
+    # Set up MLflow with integrated tracing
     if not setup_mlflow():
         logger.error("Exiting due to MLflow setup failure")
         return None
@@ -141,6 +162,11 @@ def main() -> Optional[str]:
         # Execute the crew
         logger.info("Executing GeminiMultiCrew...")
         result = crew.run()
+
+        if not result:
+            logger.error("Received empty result from GeminiMultiCrew")
+            mlflow.log_metric("success", 0.0)
+            return None
 
         # Log success metric and result snippet
         mlflow.log_metric("success", 1.0)

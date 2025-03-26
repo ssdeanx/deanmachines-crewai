@@ -15,25 +15,29 @@ from src.ollama.simplified_tasks import get_sequential_tasks
 from src.ollama.knowledge.manager import KnowledgeManager
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.language_models.llms import LLM
-from dataclasses import dataclass, field
 
 # Load environment variables at module level
 load_dotenv()
 
-@dataclass
 class GeminiChatLLM(LLM):
     """Custom LangChain wrapper for Gemini 2.0."""
 
-    model_name: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-2.0-flash"))
-    temperature: float = field(default_factory=lambda: float(os.getenv("GEMINI_TEMPERATURE", "0.7")))
-    top_p: float = field(default_factory=lambda: float(os.getenv("GEMINI_TOP_P", "0.95")))
-    max_output_tokens: int = field(default_factory=lambda: int(os.getenv("GEMINI_MAX_TOKENS", "8192")))
-    context_window: int = field(default_factory=lambda: int(os.getenv("GEMINI_CONTEXT_WINDOW", "1000000")))
-    model: Any = field(init=False)
-
-    def __post_init__(self):
-        """Initialize the Gemini model after dataclass initialization."""
+    def __init__(
+        self,
+        model_name: str = None,
+        temperature: float = None,
+        top_p: float = None,
+        max_output_tokens: int = None,
+    ):
+        """Initialize with model parameters."""
         super().__init__()
+
+        # Set model parameters from environment or use defaults
+        self.model_name = model_name or os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+        self.temperature = temperature or float(os.getenv("GEMINI_TEMPERATURE", "0.7"))
+        self.top_p = top_p or float(os.getenv("GEMINI_TOP_P", "0.95"))
+        self.max_output_tokens = max_output_tokens or int(os.getenv("GEMINI_MAX_TOKENS", "8192"))
+        self.context_window = int(os.getenv("GEMINI_CONTEXT_WINDOW", "1000000"))
 
         # Get API key from environment
         api_key = os.getenv("GEMINI_API_KEY")
@@ -88,7 +92,7 @@ class GeminiChatLLM(LLM):
             if not response:
                 raise ValueError("Empty response from Gemini API")
 
-            if response.error:
+            if hasattr(response, 'error') and response.error:
                 raise ValueError(f"Gemini API error: {response.error}")
 
             result = response.text
@@ -136,7 +140,7 @@ class GeminiMultiCrew:
     5. Knowledge base writing from the reporter agent
     """
 
-    def __init__(self, topic="RL Learning Environment Design"):
+    def __init__(self, topic="climate change impacts on agriculture"):
         """
         Initialize the GeminiMultiCrew.
 
@@ -226,12 +230,12 @@ class GeminiMultiCrew:
                 try:
                     parsed_content = json.loads(content)
                     entry_id = f"report_{self.topic.replace(' ', '_')}"
-                    self.knowledge_manager.save_entry("reports", entry_id, parsed_content)
+                    self.knowledge_manager.store_entry("reports", entry_id, parsed_content)
                     return f"Successfully saved structured report to knowledge base with ID: {entry_id}"
                 except json.JSONDecodeError:
                     # If not valid JSON, save as raw text
                     entry_id = f"report_{self.topic.replace(' ', '_')}"
-                    self.knowledge_manager.save_entry("reports", entry_id, {"content": content, "topic": self.topic})
+                    self.knowledge_manager.store_entry("reports", entry_id, {"content": content, "topic": self.topic})
                     return f"Successfully saved text report to knowledge base with ID: {entry_id}"
             except Exception as e:
                 return f"Error saving to knowledge base: {str(e)}"

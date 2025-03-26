@@ -107,7 +107,7 @@ class GeminiCrew(BaseModelCrew):
 
     def __init__(self, *args, **kwargs):
         """Initialize Gemini crew with model configuration."""
-        self.model_type = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
+        self.model_type = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
         self.thinking_mode = os.getenv("GEMINI_THINKING_MODE", "enhanced")
         super().__init__(*args, **kwargs)
 
