@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format.
 
+## [2.0.3] - 2025-03-26
+
+### Added
+
+- SerperSearchTool with MLflow metrics tracking
+- Retry utilities with exponential backoff
+- ReadWriteTool with error recovery
+- Directory structure for reports and workspace
+- PostgreSQL MLflow backend integration
+- Environment configuration management
+
+### Enhanced
+
+- Simplified search tool implementation
+- Improved error handling in all tools
+- MLflow tracking configuration
+- Tool factory error recovery
+- Agent context passing
+- Documentation with progress tracking
+
+### Fixed
+
+- Unused imports cleanup
+- Search tool compatibility issues
+- Tool factory initialization
+- MLflow connection handling
+- Environment variable access
+- Webdriver dependency management
 
 ## [2.0.2] - 2024-03-25
 
@@ -59,8 +87,6 @@ All notable changes to this project will be documented in this file following [K
 - Token calculation and tracking
 - Task assignment logic
 - Performance monitoring accuracy
-
-## [2.0.1] - 2024-03-19
 
 ## [2.0.0] - 2024-03-20
 

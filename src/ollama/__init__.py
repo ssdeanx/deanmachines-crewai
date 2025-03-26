@@ -1,5 +1,8 @@
-from .crews.model_crews import GeminiCrew, LMStudioCrew
+"""
+Ollama project initialization.
+"""
+from .multi_gemini_crew import GeminiMultiCrew
 from .tools.tool_factory import ToolFactory
 
 __version__ = "2.0.0"
-__all__ = ["GeminiCrew", "LMStudioCrew", "ToolFactory"]
+__all__ = ["GeminiMultiCrew", "ToolFactory"]

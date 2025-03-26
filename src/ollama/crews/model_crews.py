@@ -1,33 +1,45 @@
+"""
+Model-specific crew implementations with standardized base class.
+Supports both Gemini and LM Studio model variants.
+"""
 from typing import Dict, Any, List, Optional
-from crewai import Agent, Task, Crew, LLM
+from crewai import Agent, Task, Crew
+from langchain_core.language_models import LLM
 import os
 from pathlib import Path
 from datetime import datetime
 import json
-from ..tools.search_tools import SearchManager
+from ..tools.search_tools import SerperSearchTool
 import logging
 from ..tools.tool_factory import ToolFactory
 
+# Configure logging
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
 class BaseModelCrew:
+    """Base class for model-specific crews."""
+
     def __init__(self, topic: str = "AI and machine learning"):
+        """Initialize base crew with common setup."""
         self.topic = topic
-        self.agents = {}
-        self.output_dir = Path("./outputs")
+        self.agents: Dict[str, Agent] = {}
+        self.output_dir = Path("outputs")
         self.output_dir.mkdir(exist_ok=True)
         self.tool_factory = ToolFactory()
         self.llm = self._setup_llm()
-        self.search_manager = SearchManager()
+        self.search_tool = SerperSearchTool()
 
     def _setup_llm(self) -> Optional[LLM]:
+        """Set up model-specific LLM."""
         raise NotImplementedError
 
     def _create_agents(self) -> Dict[str, Agent]:
+        """Create model-specific agents."""
         raise NotImplementedError
 
     def _create_tasks(self) -> List[Task]:
+        """Create sequential tasks for the agents."""
         if not self.agents:
             self._create_agents()
 
@@ -36,7 +48,7 @@ class BaseModelCrew:
                 description=f"Research deeply about: {self.topic}",
                 expected_output="Detailed research findings in structured format",
                 agent=self.agents["researcher"],
-                tools=[self.search_manager.search]
+                tools=[self.search_tool.search]
             ),
             Task(
                 description=f"Analyze findings about: {self.topic}",
@@ -47,6 +59,7 @@ class BaseModelCrew:
         return tasks
 
     def run(self) -> Dict[str, Any]:
+        """Execute the crew's tasks and save results."""
         try:
             agents = self._create_agents()
             tasks = self._create_tasks()
@@ -72,85 +85,70 @@ class BaseModelCrew:
             raise
 
     def _save_output(self, result: Dict[str, Any]) -> None:
+        """Save crew execution results to file."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_file = self.output_dir / f"{self.__class__.__name__}_{timestamp}.json"
-        with open(output_file, "w") as f:
+        with open(output_file, "w", encoding='utf-8') as f:
             json.dump(result, f, indent=2)
 
-    def _get_tools_for_agent(self, tool_names: List[str]):
-        try:
-            return self.tool_factory.get_tools_for_agent(tool_names)
-        except Exception as e:
-            logger.error(f"Failed to get tools: {str(e)}")
-            return []
+    def _get_tools(self, tool_names: List[str]) -> List[Any]:
+        """Get tools by name from the tool factory."""
+        tools = []
+        for name in tool_names:
+            try:
+                if tool := self.tool_factory.get_tool(name):
+                    tools.append(tool)
+            except Exception as e:
+                logger.warning(f"Failed to get tool {name}: {str(e)}")
+        return tools
 
 class GeminiCrew(BaseModelCrew):
+    """Gemini-specific crew implementation."""
+
     def __init__(self, *args, **kwargs):
-        self.model_type = os.getenv("GEMINI_MODEL", "gemini-2.5-pro-exp-03-25")
+        """Initialize Gemini crew with model configuration."""
+        self.model_type = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
         self.thinking_mode = os.getenv("GEMINI_THINKING_MODE", "enhanced")
         super().__init__(*args, **kwargs)
 
     def _setup_llm(self) -> LLM:
+        """Set up Gemini LLM with environment configuration."""
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable is required")
 
-        # Configure model based on type
-        if self.model_type == os.getenv("GEMINI_2_5_PRO"):
-            max_tokens = int(os.getenv("GEMINI_2_5_MAX_TOKENS", "32768"))
-            context_window = int(os.getenv("GEMINI_2_5_CONTEXT_WINDOW", "1000000"))
-        elif "thinking" in self.model_type.lower():
-            max_tokens = int(os.getenv("GEMINI_MAX_TOKENS", "8192"))
-            context_window = int(os.getenv("GEMINI_CONTEXT_WINDOW", "1000000"))
-        else:
-            max_tokens = int(os.getenv("GEMINI_MAX_TOKENS", "8192"))
-            context_window = int(os.getenv("GEMINI_CONTEXT_WINDOW", "1000000"))
-
         return LLM(
-            model=f"gemini/{self.model_type}",
+            model=self.model_type,
             api_key=api_key,
             temperature=float(os.getenv("GEMINI_TEMPERATURE", "0.7")),
-            max_tokens=max_tokens,
-            context_window=context_window,
-            top_p=float(os.getenv("GEMINI_TOP_P", "0.95")),
-            model_kwargs={
-                "thinking_mode": self.thinking_mode,
-                "features": os.getenv("GEMINI_2_5_FEATURES", "").split(",")
-            }
+            max_tokens=int(os.getenv("GEMINI_MAX_TOKENS", "8192")),
+            context_window=int(os.getenv("GEMINI_CONTEXT_WINDOW", "1000000")),
+            top_p=float(os.getenv("GEMINI_TOP_P", "0.95"))
         )
 
     def _create_agents(self) -> Dict[str, Agent]:
+        """Create Gemini-specific agents with appropriate tools."""
         try:
-            # Set agent configurations based on model capabilities
-            researcher_config = {
-                "tools": ["web_search", "file_analyzer", "knowledge_base"]
-            }
-            analyzer_config = {
-                "tools": ["structured_analysis", "validation_tool", "insight_generator"]
-            }
-
-            # Add enhanced capabilities for 2.5 Pro
-            if self.model_type == os.getenv("GEMINI_2_5_PRO"):
-                researcher_config["tools"].extend(["advanced_reasoning", "tool_use"])
-                analyzer_config["tools"].extend(["multimodal_analysis", "code_generation"])
+            researcher_tools = self._get_tools(["web_search"]) + [self.search_tool.search]
+            analyzer_tools = self._get_tools(["structured_analysis"])
 
             self.agents = {
                 "researcher": Agent(
                     role="Research Expert",
                     goal="Conduct comprehensive research with advanced reasoning",
                     backstory="Expert researcher with advanced analytical capabilities",
-                    allow_delegation=True,
+                    allow_delegation=False,
                     llm=self.llm,
-                    tools=self._get_tools_for_agent(researcher_config["tools"]) + [self.search_manager.search],
+                    tools=researcher_tools,
                     verbose=True
                 ),
                 "analyzer": Agent(
                     role="Analysis Expert",
                     goal="Process and analyze findings with enhanced thinking",
                     backstory="Expert analyst with advanced pattern recognition",
-                    allow_delegation=True,
+                    allow_delegation=False,
                     llm=self.llm,
-                    tools=self._get_tools_for_agent(analyzer_config["tools"]),
+                    tools=analyzer_tools,
                     verbose=True
                 )
             }
@@ -160,12 +158,12 @@ class GeminiCrew(BaseModelCrew):
             raise
 
 class LMStudioCrew(BaseModelCrew):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    """LM Studio-specific crew implementation."""
 
     def _setup_llm(self) -> LLM:
+        """Set up LM Studio LLM with environment configuration."""
         api_base = os.getenv("LMSTUDIO_API_URL", "http://localhost:1234")
-        model = os.getenv("LMSTUDIO_MODEL", "gemma-3-4b-it")
+        model = os.getenv("LMSTUDIO_MODEL", "gemma-7b-it")
 
         try:
             return LLM(
@@ -180,32 +178,28 @@ class LMStudioCrew(BaseModelCrew):
             raise
 
     def _create_agents(self) -> Dict[str, Agent]:
+        """Create LM Studio-specific agents with appropriate tools."""
         try:
+            researcher_tools = self._get_tools(["web_search"]) + [self.search_tool.search]
+            analyzer_tools = self._get_tools(["structured_analysis"])
+
             self.agents = {
                 "researcher": Agent(
                     role="Research Expert",
                     goal="Conduct thorough research on the given topic",
                     backstory="Expert at gathering and analyzing information from various sources",
-                    allow_delegation=True,
+                    allow_delegation=False,
                     llm=self.llm,
-                    tools=self._get_tools_for_agent([
-                        "web_search",
-                        "file_analyzer",
-                        "knowledge_base"
-                    ]) + [self.search_manager.search],
+                    tools=researcher_tools,
                     verbose=True
                 ),
                 "analyzer": Agent(
                     role="Analysis Expert",
                     goal="Process and structure research findings",
                     backstory="Expert at breaking down complex topics and extracting key insights",
-                    allow_delegation=True,
+                    allow_delegation=False,
                     llm=self.llm,
-                    tools=self._get_tools_for_agent([
-                        "structured_analysis",
-                        "validation_tool",
-                        "insight_generator"
-                    ]),
+                    tools=analyzer_tools,
                     verbose=True
                 )
             }

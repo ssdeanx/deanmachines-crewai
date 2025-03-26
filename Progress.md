@@ -1,58 +1,105 @@
 # Project Progress
 
-## Completed Features
-- ✅ Implemented Gemini crew with proper error handling and tools
-- ✅ Implemented LM Studio crew with OpenAI-compatible endpoint
-- ✅ Created shared tool infrastructure with ToolFactory
-- ✅ Added MLflow integration for both models
-- ✅ Implemented proper logging and error handling
+## Current Development Phase
 
-## Current Status
-- Both Gemini and LM Studio crews are ready for use
-- Tools infrastructure is in place with web search, file analysis, and knowledge base tools
-- MLflow tracking is configured for model performance comparison
+Currently in Phase 1 of the testing harness implementation:
+
+- Setting up baseline multi-agent workflow using Gemini
+- Implementing PostgreSQL MLflow logging
+- Configuring basic tool infrastructure
+
+## Run Commands
+
+```bash
+# Run Gemini multi-agent test (Phase 1)
+python -m src.ollama.main_multi_gemini_test
+```
+
+## Completed Features
+
+- ✅ Created basic directory structure (reports/, workspace/)
+- ✅ Set up PostgreSQL for MLflow tracking
+- ✅ Implemented SerperSearchTool with error handling
+- ✅ Added retry utilities with backoff logic
+- ✅ Configured environment variable handling
+- ✅ Set up basic MLflow logging infrastructure
+
+## In Progress
+
+1. Completing Phase 1 - Gemini Test Harness:
+   - [ ] Verify Gemini API connectivity
+   - [ ] Test sequential task execution
+   - [ ] Validate MLflow PostgreSQL logging
+   - [ ] Test context passing between agents
+
+2. Setting up Phase 2 - LM Studio Test Harness:
+   - [ ] Initialize LM Studio integration
+   - [ ] Configure OpenAI-compatible endpoint
+   - [ ] Set up parallel test structure
 
 ## Next Steps
-1. Complete knowledge base tool implementation for better information sharing
-2. Enhance validation and testing tools
-3. Implement advanced analysis and insight generation features
-4. Add parallel execution support for model comparison
-5. Implement proper MLflow metrics tracking with PostgreSQL backend correctly integrated
-6. Enhance agent memory configuration with proper 1M token context window support
-7. Implement efficient parallel processing between Gemini Flash and LM Studio models
-8. Add selenium search tool integration with proper error handling and retries
-9. Complete structured thinking implementation with new Gemini 2.0 experimental thinking mode
-10. Update code execution capabilities to utilize Gemini Flash's native code execution
-11. Create proper knowledge base structure for sharing context between models
-12. Add proper model fallback logic between Flash and LM Studio
-13. Implement config validation to ensure environment variables are properly set
-14. Add performance monitoring dashboard for real-time model comparison
 
-## Usage
-To run analysis with either model:
-```bash
-python -m src.ollama.main --model gemini --topic "Your topic"
-# or
-python -m src.ollama.main --model lmstudio --topic "Your topic"
-```
+1. Complete Phase 1 verification checklist:
+   - Console execution validation
+   - MLflow UI artifact verification
+   - Tool initialization checks
+   - Context passing verification
+
+2. Prepare for Phase 2 (LM Studio):
+   - Set up LM Studio environment
+   - Configure API endpoint
+   - Replicate test structure
+
+3. Plan for Phase 3 (Combined Models):
+   - Design mixed-model workflow
+   - Set up cross-model context passing
+   - Implement model-specific logging
 
 ## Environment Setup
-1. Copy .env.example to .env
-2. Set GEMINI_API_KEY for Gemini usage
-3. Configure LM Studio endpoint (default: http://localhost:1234)
-4. Start MLflow server with PostgreSQL backend
-5. Set required environment variables:
-   - MLFLOW_TRACKING_URI
-   - GEMINI_API_KEY
-   - LANGCHAIN_API_KEY
-6. Configure LM Studio (optional):
-   - LMSTUDIO_API_URL
-   - LMSTUDIO_MODEL
 
-## Required Dependencies
+Required environment variables:
+
 ```bash
-# Core dependencies
-pip install crewai langchain langgraph mlflow psycopg2-binary selenium
-# Additional tools
-pip install google-generativeai pillow python-dotenv pyyaml requests webdriver-manager
+# Core API Keys
+GEMINI_API_KEY=your_key_here
+SERPER_API_KEY=your_key_here
+
+# MLflow Configuration
+MLFLOW_TRACKING_URI=postgresql://user:pass@host:port/db
+
+# Gemini Configuration
+GEMINI_MODEL=gemini-1.5-pro
+GEMINI_MAX_TOKENS=2048
+GEMINI_CONTEXT_WINDOW=1000000
+GEMINI_TEMPERATURE=0.7
+GEMINI_TOP_P=0.95
 ```
+
+## Dependencies
+
+```bash
+# Core requirements
+pip install crewai langchain google-generativeai mlflow
+
+# Database
+pip install psycopg2-binary
+
+# Tools and utilities
+pip install python-dotenv requests webdriver-manager selenium
+
+# Development
+pip install black ruff pytest
+```
+
+## Known Issues
+
+1. Need to properly handle webdriver-manager dependency
+2. Ensure PostgreSQL connection is properly configured
+3. Verify all environment variables are accessible
+
+## Documentation Status
+
+- ✅ Basic setup instructions
+- ✅ Environment variable documentation
+- 🔄 Test harness documentation in progress
+- 📝 Need to add verification checklists

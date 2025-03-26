@@ -312,73 +312,88 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and updates.
 graph TB
     User((External User))
 
-    subgraph "AI Analysis System"
-        subgraph "Model Integration Layer"
-            GeminiContainer["Gemini Integration<br>(Python/Google AI)"]
-            OllamaContainer["Ollama Integration<br>(Python/Ollama)"]
-            LMStudioContainer["LMStudio Integration<br>(Python/LMStudio)"]
-        end
-
-        subgraph "Core System"
-            CrewManager["Crew Management<br>(CrewAI)"]
-            TaskManager["Task Management<br>(YAML Config)"]
-
-            subgraph "Tools Layer"
-                CustomTools["Custom Tools<br>(Python)"]
-                LangChainTools["LangChain Tools<br>(LangChain)"]
-                LangGraphTools["LangGraph Tools<br>(LangGraph)"]
-            end
-
-            subgraph "Knowledge Management"
-                KnowledgeBase["Knowledge Base<br>(YAML/JSON)"]
-                PromptTemplates["Prompt Templates<br>(Markdown)"]
-                Categories["Categories System<br>(YAML)"]
-            end
-        end
-
-        subgraph "Monitoring & Analytics"
-            MLFlow["MLFlow Tracking<br>(MLflow)"]
-            Dashboard["MLFlow Dashboard<br>(Python/MLflow)"]
-        end
-
-        subgraph "Utility Components"
-            ConfigManager["Configuration Manager<br>(YAML)"]
+    subgraph "Ollama System"
+        subgraph "Core Services"
+            OllamaRunner["Ollama Runner<br>(Python)"]
+            MLflowDashboard["MLflow Dashboard<br>(MLflow)"]
             KnowledgeManager["Knowledge Manager<br>(Python)"]
-            PerformanceMonitor["Performance Monitor<br>(Python)"]
+        end
+
+        subgraph "Model Services"
+            subgraph "Gemini Container"
+                GeminiClient["Gemini Client<br>(Google AI)"]
+                GeminiCrew["Gemini Crew<br>(Python)"]
+            end
+
+            subgraph "LMStudio Container"
+                LMStudioClient["LMStudio Client<br>(REST API)"]
+                LMStudioCrew["LMStudio Crew<br>(Python)"]
+            end
+
+            ModelCoordinator["Model Coordinator<br>(Python)"]
+        end
+
+        subgraph "Agent System"
+            subgraph "Agent Components"
+                ResearchAgent["Research Agent<br>(CrewAI)"]
+                AnalysisAgent["Analysis Agent<br>(CrewAI)"]
+                CodeExpertAgent["Code Expert Agent<br>(CrewAI)"]
+                IntegratorAgent["Integrator Agent<br>(CrewAI)"]
+            end
+
+            subgraph "Tool Components"
+                ToolFactory["Tool Factory<br>(Python)"]
+                SearchTools["Search Tools<br>(Python)"]
+                CustomTools["Custom Tools<br>(Python)"]
+            end
+        end
+
+        subgraph "Knowledge Base"
+            KnowledgeBase[("Knowledge Base<br>(YAML/JSON)")]
+            ConfigStore[("Configuration Store<br>(YAML)")]
+            PromptTemplates["Prompt Templates<br>(Markdown/YAML)"]
+        end
+
+        subgraph "Monitoring"
+            MLflowTracking["MLflow Tracking<br>(SQLite)"]
+            Logging["Logging System<br>(Python)"]
         end
     end
 
     subgraph "External Services"
-        SerperDev["Serper.dev API<br>(REST)"]
+        SerperDev["SerperDev API<br>(REST API)"]
+        GeminiAPI["Google Gemini API<br>(REST API)"]
     end
 
-    User -->|Interacts| CrewManager
+    %% Relationships
+    User -->|"Interacts with"| OllamaRunner
+    OllamaRunner -->|"Manages"| ModelCoordinator
+    OllamaRunner -->|"Uses"| MLflowDashboard
+    OllamaRunner -->|"Uses"| KnowledgeManager
 
-    CrewManager -->|Manages| GeminiContainer
-    CrewManager -->|Manages| OllamaContainer
-    CrewManager -->|Manages| LMStudioContainer
+    ModelCoordinator -->|"Coordinates"| GeminiClient
+    ModelCoordinator -->|"Coordinates"| LMStudioClient
 
-    CrewManager -->|Uses| TaskManager
-    TaskManager -->|Configures| CustomTools
-    TaskManager -->|Configures| LangChainTools
-    TaskManager -->|Configures| LangGraphTools
+    GeminiClient -->|"Calls"| GeminiAPI
+    GeminiClient -->|"Uses"| SearchTools
+    LMStudioClient -->|"Uses"| SearchTools
 
-    CustomTools -->|Accesses| KnowledgeBase
-    LangChainTools -->|Uses| SerperDev
+    GeminiCrew -->|"Uses"| GeminiClient
+    LMStudioCrew -->|"Uses"| LMStudioClient
 
-    KnowledgeManager -->|Manages| KnowledgeBase
-    KnowledgeManager -->|Manages| PromptTemplates
-    KnowledgeManager -->|Manages| Categories
+    ResearchAgent -->|"Uses"| ToolFactory
+    AnalysisAgent -->|"Uses"| ToolFactory
+    CodeExpertAgent -->|"Uses"| ToolFactory
+    IntegratorAgent -->|"Uses"| ToolFactory
 
-    CrewManager -->|Logs to| MLFlow
-    MLFlow -->|Displays in| Dashboard
+    ToolFactory -->|"Creates"| SearchTools
+    ToolFactory -->|"Creates"| CustomTools
+    SearchTools -->|"Calls"| SerperDev
 
-    ConfigManager -->|Configures| CrewManager
-    ConfigManager -->|Configures| TaskManager
+    KnowledgeManager -->|"Manages"| KnowledgeBase
+    KnowledgeManager -->|"Reads"| ConfigStore
+    KnowledgeManager -->|"Uses"| PromptTemplates
 
-    PerformanceMonitor -->|Tracks| MLFlow
-
-    GeminiContainer -->|Uses| KnowledgeManager
-    OllamaContainer -->|Uses| KnowledgeManager
-    LMStudioContainer -->|Uses| KnowledgeManager
+    MLflowDashboard -->|"Tracks"| MLflowTracking
+    OllamaRunner -->|"Logs to"| Logging
 ```

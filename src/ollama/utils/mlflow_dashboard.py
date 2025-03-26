@@ -1,21 +1,27 @@
-import json
+"""
+MLflow dashboard for monitoring and tracking Ollama Crew performance.
+Includes real-time metrics, visualizations, and multimodal tracking.
+"""
 import logging
 import os
-import sys
-import yaml
-import psutil
-import platform
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional, Any
 
 import mlflow
-import mlflow.sklearn
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
 from plotly.subplots import make_subplots
+import psutil
+import platform
+import sys
+import yaml
+from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
+
+# Configure logging
 logger = logging.getLogger(__name__)
 
 class MLflowDashboard:
@@ -24,13 +30,25 @@ class MLflowDashboard:
     def __init__(
         self,
         experiment_name: str = "ollama_crew_monitoring",
-        tracking_uri: str = "sqlite:///mlflow.db",
+        tracking_uri: Optional[str] = None,
         artifacts_path: str = "./mlflow-artifacts",
         config_path: Optional[str] = None
     ) -> None:
-        """Initialize MLflow dashboard with configuration."""
+        """
+        Initialize MLflow dashboard with configuration.
+
+        Args:
+            experiment_name: Name of the MLflow experiment
+            tracking_uri: Optional MLflow tracking URI (defaults to env var)
+            artifacts_path: Path to store artifacts
+            config_path: Optional path to configuration file
+        """
         self.experiment_name = experiment_name
-        self.tracking_uri = tracking_uri
+        # Use environment variable for tracking URI if not provided
+        self.tracking_uri = tracking_uri or os.getenv("MLFLOW_TRACKING_URI")
+        if not self.tracking_uri:
+            raise ValueError("MLFLOW_TRACKING_URI must be set in environment or provided")
+
         self.artifacts_path = Path(artifacts_path)
         self.artifacts_path.mkdir(parents=True, exist_ok=True)
 
@@ -40,6 +58,8 @@ class MLflowDashboard:
         self.current_metrics: Dict[str, float] = {}
         self.historical_metrics: List[Dict] = []
         self.current_visualizations: Dict[str, go.Figure] = {}
+
+        logger.info(f"MLflowDashboard initialized with tracking URI: {self.tracking_uri}")
 
     def _load_config(self, config_path: Optional[str]) -> Dict:
         """Load dashboard configuration"""
@@ -92,16 +112,24 @@ class MLflowDashboard:
     def _initialize_mlflow(self) -> None:
         """Initialize MLflow experiment"""
         try:
+            if not self.tracking_uri:
+                raise ValueError("MLflow tracking URI not configured")
+
             mlflow.set_tracking_uri(self.tracking_uri)
+            logger.info(f"Set MLflow tracking URI to: {self.tracking_uri}")
+
             self.experiment = mlflow.get_experiment_by_name(self.experiment_name)
 
             if not self.experiment:
+                artifact_location = str(self.artifacts_path.resolve())
                 self.experiment_id = mlflow.create_experiment(
                     self.experiment_name,
-                    artifact_location=str(self.artifacts_path)
+                    artifact_location=artifact_location
                 )
+                logger.info(f"Created new experiment: {self.experiment_name}")
             else:
                 self.experiment_id = self.experiment.experiment_id
+                logger.info(f"Using existing experiment: {self.experiment_name}")
 
         except Exception as e:
             logger.error(f"Error initializing MLflow: {str(e)}")

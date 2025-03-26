@@ -1,38 +1,52 @@
+"""
+Retry utilities for handling transient failures.
+"""
 import time
-from typing import Callable, Any, Dict
-from functools import wraps
 import logging
+from functools import wraps
+from typing import Callable, Any, Optional
 
 logger = logging.getLogger(__name__)
 
 def retry_with_backoff(
-    retries: int = 3,
-    backoff_factor: float = 2,
-    initial_delay: float = 1,
-    exceptions: tuple = (Exception,)
-):
-    def decorator(func: Callable):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            delay = initial_delay
-            last_exception = None
+    max_attempts: int = 3,
+    initial_wait: float = 1.0,
+    exponential_base: float = 2.0,
+    logger: Optional[logging.Logger] = None
+) -> Callable:
+    """
+    Decorator that implements exponential backoff for retrying failed operations.
 
-            for attempt in range(retries):
+    Args:
+        max_attempts: Maximum number of retry attempts (default: 3)
+        initial_wait: Initial wait time in seconds (default: 1.0)
+        exponential_base: Base for exponential backoff (default: 2.0)
+        logger: Optional logger instance for retry logging
+    """
+    if logger is None:
+        logger = logging.getLogger(__name__)
+
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            attempts = 0
+            while attempts < max_attempts:
                 try:
                     return func(*args, **kwargs)
-                except exceptions as e:
-                    last_exception = e
-                    if attempt < retries - 1:
-                        sleep_time = delay * (backoff_factor ** attempt)
-                        logger.warning(
-                            f"Attempt {attempt + 1} failed: {str(e)}. "
-                            f"Retrying in {sleep_time:.2f} seconds..."
+                except Exception as e:
+                    attempts += 1
+                    if attempts == max_attempts:
+                        logger.error(
+                            f"Failed after {max_attempts} attempts. Final error: {str(e)}"
                         )
-                        time.sleep(sleep_time)
-                    continue
+                        raise
 
-            logger.error(f"All {retries} attempts failed. Last error: {str(last_exception)}")
-            raise last_exception
-
+                    wait_time = initial_wait * (exponential_base ** (attempts - 1))
+                    logger.warning(
+                        f"Attempt {attempts} failed: {str(e)}. "
+                        f"Retrying in {wait_time:.2f} seconds..."
+                    )
+                    time.sleep(wait_time)
+            return None
         return wrapper
     return decorator
