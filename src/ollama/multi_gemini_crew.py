@@ -18,6 +18,7 @@ from src.ollama.knowledge.manager import KnowledgeManager
 from langchain_core.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.language_models.llms import LLM
 from langchain_core.outputs import GenerationChunk, Generation, LLMResult
+from langchain_community.utilities import SerpAPIWrapper
 
 
 
