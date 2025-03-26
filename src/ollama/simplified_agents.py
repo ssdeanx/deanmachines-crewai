@@ -3,7 +3,7 @@ Simplified agent definitions for CrewAI test harnesses.
 Provides consistent agent creation functions for testing with different LLMs.
 """
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional, Any
 from crewai import Agent
 
 def get_gemini_agents(gemini_llm, tools: Optional[Dict[str, Any]] = None) -> Dict[str, Agent]:
@@ -78,7 +78,7 @@ def get_lmstudio_agents(lmstudio_llm, tools: Optional[Dict[str, Any]] = None) ->
     logger = logging.getLogger(__name__)
     logger.info("Creating three LM Studio agents: researcher, summarizer, reporter")
 
-    # Initialize tools for each agent
+    # Initialize tools for each agent - safely handle None
     researcher_tools = tools.get("researcher", []) if tools else []
     summarizer_tools = tools.get("summarizer", []) if tools else []
     reporter_tools = tools.get("reporter", []) if tools else []
@@ -139,7 +139,7 @@ def get_combo_agents(gemini_llm, lmstudio_llm, tools: Optional[Dict[str, Any]] =
     logger = logging.getLogger(__name__)
     logger.info("Creating combo agents with mixed LLM assignment: Gemini→LM Studio→Gemini")
 
-    # Initialize tools for each agent
+    # Initialize tools for each agent - safely handle None
     researcher_tools = tools.get("researcher", []) if tools else []
     summarizer_tools = tools.get("summarizer", []) if tools else []
     reporter_tools = tools.get("reporter", []) if tools else []

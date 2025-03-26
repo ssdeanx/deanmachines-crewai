@@ -24,6 +24,9 @@ def get_sequential_tasks(
         CrewAI context passing works through the context=[previous_task] mechanism.
         This is what enables output from one task to be used as input for the next task.
         Task order in the returned list is crucial for sequential processing.
+
+    Raises:
+        ValueError: If any required agent role is missing from the agents dictionary
     """
     logger = logging.getLogger(__name__)
     logger.info(f"Creating sequential tasks for topic: {topic}")
@@ -32,7 +35,9 @@ def get_sequential_tasks(
     required_agents = ["researcher", "summarizer", "reporter"]
     for agent_role in required_agents:
         if agent_role not in agents:
-            raise ValueError(f"Missing required agent: {agent_role}")
+            error_msg = f"Missing required agent: {agent_role}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
     # Create the research task (first task, no dependencies)
     research_task = Task(
@@ -68,7 +73,7 @@ def get_sequential_tasks(
         """,
         expected_output="A well-structured summary with bullet points highlighting key findings",
         agent=agents["summarizer"],
-        context=[research_task]  # ⟵ CRITICAL: This is how context is passed from research_task
+        context=[research_task]  # This is how context is passed from research_task
     )
 
     # Create the report task (depends on summarize_task)
@@ -87,8 +92,8 @@ def get_sequential_tasks(
         """,
         expected_output="A complete, professional report synthesizing all the information",
         agent=agents["reporter"],
-        context=[summarize_task]  # ⟵ CRITICAL: This is how context is passed from summarize_task
+        context=[summarize_task]  # This is how context is passed from summarize_task
     )
 
-    # Return tasks in the correct execution order
+    logger.info("Successfully created sequential tasks with proper context dependencies")
     return [research_task, summarize_task, report_task]

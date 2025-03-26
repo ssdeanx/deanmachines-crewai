@@ -2,35 +2,8 @@
 
 All notable changes to this project will be documented in this file following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format.
 
-## [Unreleased]
 
-### Added
-
-- Multiple model support with dynamic assignment
-- Gemini Flash model integration with 1M token context
-- LM Studio embedding model support
-- Advanced model switching and fallback logic
-- Selenium search tool integration
-- Enhanced MLflow PostgreSQL tracking
-
-### Enhanced
-
-- Agent memory configuration with 1M token support
-- Model coordination and task assignment
-- Parallel processing between models
-- Knowledge base with proper categorization
-- Task pipeline with model-specific assignments
-- Real-time performance comparison between models
-
-### Fixed
-
-- Model context handling for large inputs
-- Memory management across different models
-- Token calculation and tracking
-- Task assignment logic
-- Performance monitoring accuracy
-
-## [2.1.0] - 2024-03-24
+## [2.0.2] - 2024-03-25
 
 ### Added
 
@@ -58,6 +31,36 @@ All notable changes to this project will be documented in this file following [K
 - Task dependency resolution
 - Agent communication patterns
 - Dashboard data persistence
+
+## [2.0.1] - 2024-03-24
+
+### Added
+
+- Multiple model support with dynamic assignment
+- Gemini Flash model integration with 1M token context
+- LM Studio embedding model support
+- Advanced model switching and fallback logic
+- Selenium search tool integration
+- Enhanced MLflow PostgreSQL tracking
+
+### Enhanced
+
+- Agent memory configuration with 1M token support
+- Model coordination and task assignment
+- Parallel processing between models
+- Knowledge base with proper categorization
+- Task pipeline with model-specific assignments
+- Real-time performance comparison between models
+
+### Fixed
+
+- Model context handling for large inputs
+- Memory management across different models
+- Token calculation and tracking
+- Task assignment logic
+- Performance monitoring accuracy
+
+## [2.0.1] - 2024-03-19
 
 ## [2.0.0] - 2024-03-20
 

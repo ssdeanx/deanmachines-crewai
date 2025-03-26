@@ -7,34 +7,64 @@ import google.generativeai as genai  # Updated import for Gemini 2.0
 import os
 import logging
 import json
+from typing import Any, List, Optional, Dict
 from dotenv import load_dotenv
 from src.ollama.tools.tool_factory import ToolFactory
 from src.ollama.simplified_agents import get_gemini_agents
 from src.ollama.simplified_tasks import get_sequential_tasks
 from src.ollama.knowledge.manager import KnowledgeManager
-from langchain.schema.language_model import BaseLanguageModel
+from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.language_models.llms import LLM
-from langchain_core.callbacks.manager import CallbackManagerForLLMRun
-from typing import Any, List, Mapping, Optional
+
+# Load environment variables at module level
+load_dotenv()
 
 class GeminiChatLLM(LLM):
     """Custom LangChain wrapper for Gemini 2.0 using the updated google.generativeai library."""
 
-    model_name: str = "gemini-1.5-pro"
-    temperature: float = 0.7
-    top_p: float = 0.95
-    top_k: int = 0
-
-    def __init__(self, api_key: str, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the Gemini LLM with API key and configure genai."""
         super().__init__(**kwargs)
+
+        # Get API key from environment
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY environment variable not set")
+
+        # Configure the Gemini API
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(model_name=self.model_name,
-                                          generation_config={
-                                              "temperature": self.temperature,
-                                              "top_p": self.top_p,
-                                              "top_k": self.top_k
-                                          })
+
+        # Load all configuration from environment variables
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
+        self.temperature = float(os.getenv("GEMINI_TEMPERATURE", "0.7"))
+        self.top_p = float(os.getenv("GEMINI_TOP_P", "0.95"))
+        self.max_output_tokens = int(os.getenv("GEMINI_MAX_TOKENS", "2048"))
+        self.context_window = int(os.getenv("GEMINI_CONTEXT_WINDOW", "1000000"))
+
+        # Override defaults with any provided kwargs
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+
+        # Initialize the model with proper configuration
+        generation_config = {
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "max_output_tokens": self.max_output_tokens
+        }
+
+        safety_settings = {
+            "harassment": "block_none",
+            "hate_speech": "block_none",
+            "sexually_explicit": "block_none",
+            "dangerous_content": "block_none"
+        }
+
+        self.model = genai.GenerativeModel(
+            model_name=self.model_name,
+            generation_config=generation_config,
+            safety_settings=safety_settings
+        )
 
     @property
     def _llm_type(self) -> str:
@@ -48,12 +78,85 @@ class GeminiChatLLM(LLM):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> str:
-        """Call the Gemini API and return the response."""
+        """
+        Call the Gemini API and return the response.
+
+        Args:
+            prompt: The input text to send to the model
+            stop: Optional list of stop sequences to end generation
+            run_manager: Optional callback manager for logging
+            **kwargs: Additional keyword arguments passed to the model
+
+        Returns:
+            The generated text response
+
+        Raises:
+            ValueError: If there's an error calling the Gemini API
+        """
         try:
-            response = self.model.generate_content(prompt)
-            return response.text
+            # If we have a run_manager, use it to log the prompt
+            if run_manager:
+                run_manager.on_text(prompt, color="green", end="\n")
+
+            # Generate the response
+            response = self.model.generate_content(
+                prompt,
+                generation_config=self._get_generation_config(stop=stop, **kwargs)
+            )
+
+            # Handle potential errors in the response
+            if not response:
+                raise ValueError("Empty response from Gemini API")
+
+            if response.error:
+                raise ValueError(f"Gemini API error: {response.error}")
+
+            # Extract the text from the response
+            result = response.text
+
+            # Apply stop sequences if provided
+            if stop:
+                for sequence in stop:
+                    if sequence in result:
+                        result = result[:result.index(sequence)]
+
+            # Log the response if we have a run_manager
+            if run_manager:
+                run_manager.on_text(result, color="blue", end="\n")
+
+            return result
+
         except Exception as e:
-            raise ValueError(f"Error calling Gemini API: {e}")
+            error_msg = f"Error calling Gemini API: {str(e)}"
+            if run_manager:
+                run_manager.on_text(error_msg, color="red", end="\n")
+            raise ValueError(error_msg)
+
+    def _get_generation_config(self, stop: Optional[List[str]] = None, **kwargs) -> Dict[str, Any]:
+        """
+        Create a generation config dict combining instance defaults with call-specific params.
+
+        Args:
+            stop: Optional list of stop sequences
+            **kwargs: Additional keyword arguments to override defaults
+
+        Returns:
+            Dict with generation configuration parameters
+        """
+        config = {
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "max_output_tokens": self.max_output_tokens,
+            "candidate_count": 1
+        }
+
+        # Override with any valid kwargs
+        valid_params = ["temperature", "top_p", "max_output_tokens", "candidate_count"]
+        for param in valid_params:
+            if param in kwargs:
+                config[param] = kwargs[param]
+
+        return config
 
 class GeminiMultiCrew:
     """
@@ -76,19 +179,13 @@ class GeminiMultiCrew:
         self.topic = topic
         self.logger = logging.getLogger(__name__)
 
-        # Check for required API key
-        gemini_api_key = os.getenv("GEMINI_API_KEY")
-        if not gemini_api_key:
-            raise ValueError("GEMINI_API_KEY environment variable not set")
-
-        # Initialize Gemini 2.0 LLM with the new google.generativeai library
-        self.gemini_llm = GeminiChatLLM(
-            api_key=gemini_api_key,
-            model_name=os.getenv("GEMINI_MODEL", "gemini-1.5-pro"),
-            temperature=0.7
-        )
-
-        self.logger.info("Successfully initialized Gemini 2.0 LLM")
+        # Initialize Gemini 2.0 LLM with proper configuration from environment
+        try:
+            self.gemini_llm = GeminiChatLLM()  # Will raise ValueError if GEMINI_API_KEY not set
+            self.logger.info(f"Successfully initialized Gemini 2.0 LLM with model: {self.gemini_llm.model_name}")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize Gemini LLM: {e}")
+            raise
 
         # Initialize Knowledge Manager for storing results
         try:
