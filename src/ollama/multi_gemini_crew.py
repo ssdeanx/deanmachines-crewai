@@ -3,7 +3,7 @@ Gemini-based multi-agent implementation for test harness.
 A simplified test to validate Gemini API connectivity and sequential task workflow.
 """
 from crewai import Agent, Task, Crew, Process
-import google.generativeai as genai  # Updated import for Gemini 2.0
+import google.generativeai as genai
 import os
 import logging
 import json
@@ -15,16 +15,25 @@ from src.ollama.simplified_tasks import get_sequential_tasks
 from src.ollama.knowledge.manager import KnowledgeManager
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.language_models.llms import LLM
+from dataclasses import dataclass, field
 
 # Load environment variables at module level
 load_dotenv()
 
+@dataclass
 class GeminiChatLLM(LLM):
-    """Custom LangChain wrapper for Gemini 2.0 using the updated google.generativeai library."""
+    """Custom LangChain wrapper for Gemini 2.0."""
 
-    def __init__(self, **kwargs):
-        """Initialize the Gemini LLM with API key and configure genai."""
-        super().__init__(**kwargs)
+    model_name: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-2.0-flash"))
+    temperature: float = field(default_factory=lambda: float(os.getenv("GEMINI_TEMPERATURE", "0.7")))
+    top_p: float = field(default_factory=lambda: float(os.getenv("GEMINI_TOP_P", "0.95")))
+    max_output_tokens: int = field(default_factory=lambda: int(os.getenv("GEMINI_MAX_TOKENS", "8192")))
+    context_window: int = field(default_factory=lambda: int(os.getenv("GEMINI_CONTEXT_WINDOW", "1000000")))
+    model: Any = field(init=False)
+
+    def __post_init__(self):
+        """Initialize the Gemini model after dataclass initialization."""
+        super().__init__()
 
         # Get API key from environment
         api_key = os.getenv("GEMINI_API_KEY")
@@ -33,18 +42,6 @@ class GeminiChatLLM(LLM):
 
         # Configure the Gemini API
         genai.configure(api_key=api_key)
-
-        # Load all configuration from environment variables
-        self.model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
-        self.temperature = float(os.getenv("GEMINI_TEMPERATURE", "0.7"))
-        self.top_p = float(os.getenv("GEMINI_TOP_P", "0.95"))
-        self.max_output_tokens = int(os.getenv("GEMINI_MAX_TOKENS", "2048"))
-        self.context_window = int(os.getenv("GEMINI_CONTEXT_WINDOW", "1000000"))
-
-        # Override defaults with any provided kwargs
-        for key, value in kwargs.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
 
         # Initialize the model with proper configuration
         generation_config = {
@@ -78,49 +75,29 @@ class GeminiChatLLM(LLM):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> str:
-        """
-        Call the Gemini API and return the response.
-
-        Args:
-            prompt: The input text to send to the model
-            stop: Optional list of stop sequences to end generation
-            run_manager: Optional callback manager for logging
-            **kwargs: Additional keyword arguments passed to the model
-
-        Returns:
-            The generated text response
-
-        Raises:
-            ValueError: If there's an error calling the Gemini API
-        """
+        """Call the Gemini API and return the response."""
         try:
-            # If we have a run_manager, use it to log the prompt
             if run_manager:
                 run_manager.on_text(prompt, color="green", end="\n")
 
-            # Generate the response
             response = self.model.generate_content(
                 prompt,
                 generation_config=self._get_generation_config(stop=stop, **kwargs)
             )
 
-            # Handle potential errors in the response
             if not response:
                 raise ValueError("Empty response from Gemini API")
 
             if response.error:
                 raise ValueError(f"Gemini API error: {response.error}")
 
-            # Extract the text from the response
             result = response.text
 
-            # Apply stop sequences if provided
             if stop:
                 for sequence in stop:
                     if sequence in result:
                         result = result[:result.index(sequence)]
 
-            # Log the response if we have a run_manager
             if run_manager:
                 run_manager.on_text(result, color="blue", end="\n")
 
@@ -133,16 +110,7 @@ class GeminiChatLLM(LLM):
             raise ValueError(error_msg)
 
     def _get_generation_config(self, stop: Optional[List[str]] = None, **kwargs) -> Dict[str, Any]:
-        """
-        Create a generation config dict combining instance defaults with call-specific params.
-
-        Args:
-            stop: Optional list of stop sequences
-            **kwargs: Additional keyword arguments to override defaults
-
-        Returns:
-            Dict with generation configuration parameters
-        """
+        """Create a generation config dict."""
         config = {
             "temperature": self.temperature,
             "top_p": self.top_p,
@@ -150,7 +118,6 @@ class GeminiChatLLM(LLM):
             "candidate_count": 1
         }
 
-        # Override with any valid kwargs
         valid_params = ["temperature", "top_p", "max_output_tokens", "candidate_count"]
         for param in valid_params:
             if param in kwargs:
@@ -169,7 +136,7 @@ class GeminiMultiCrew:
     5. Knowledge base writing from the reporter agent
     """
 
-    def __init__(self, topic="climate change impacts on agriculture"):
+    def __init__(self, topic="RL Learning Environment Design"):
         """
         Initialize the GeminiMultiCrew.
 

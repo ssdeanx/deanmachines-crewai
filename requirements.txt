@@ -28,3 +28,5 @@ google-generativeai>=1.6.0
 langchain-core>=0.1.0
 pandas>=2.2.0
 psutil>=5.9.8
+hyperbrowser>=0.38.0
+langchain-hyperbrowser-0.3.0
