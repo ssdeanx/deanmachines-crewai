@@ -19,11 +19,11 @@ from langchain_core.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.language_models.llms import LLM
 from langchain_core.outputs import GenerationChunk, Generation, LLMResult
 from langchain_community.utilities import SerpAPIWrapper
-
+import aiosession
 
 
 # Load environment variables if needed
-# load_dotenv()
+load_dotenv()
 
 # Setup basic logging if desired
 # logging.basicConfig(level=logging.INFO)

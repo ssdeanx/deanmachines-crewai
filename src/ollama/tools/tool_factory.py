@@ -7,9 +7,12 @@ import os
 import logging
 import datetime
 import json
+import aiohttp
+
 from typing import Optional, Any, Dict
 from langchain.tools import Tool
-from langchain_community.utilities import SerpAPIWrapper
+from langchain_community.utilities import GoogleSerperAPIWrapper as SerpAPIWrapper
+from langchain_core.utils import get_from_dict_or_env
 
 # --- Define a single safe base directory for file operations ---
 SAFE_FILE_DIR = os.path.abspath("./knowledge")
@@ -116,16 +119,30 @@ class ToolFactory:
     # --- Tool Creation Methods ---
 
     def _create_web_search_tool(self) -> Tool:
-        # ... (no changes needed here) ...
-        serper_api_key = os.getenv("SERPER_API_KEY")
+        """Creates the Google Serper web search tool."""
+        # Ensure SERPER_API_KEY is used, matching the service
+        serper_api_key = get_from_dict_or_env(
+            {}, "serper_api_key", "SERPER_API_KEY" # Use helper for flexibility
+        )
+        # serper_api_key = os.getenv("SERPER_API_KEY") # Or simpler direct access
         if not serper_api_key:
             self.logger.error("SERPER_API_KEY environment variable not set for web search tool.")
             raise ValueError("SERPER_API_KEY environment variable not set")
         try:
-            self.logger.debug("Initializing SerpAPIWrapper...")
-            search = SerpAPIWrapper(serpapi_api_key=serper_api_key)
-            self.logger.debug("SerpAPIWrapper initialized successfully.")
-            return Tool( name="web_search", description="Search the web. Input should be a search query.", func=search.run )
+            self.logger.debug("Initializing GoogleSerperAPIWrapper...")
+            # --- CORRECTED PARAMETER NAME ---
+            search = SerpAPIWrapper(serper_api_key=serper_api_key)
+            # --- End Correction ---
+            self.logger.debug("GoogleSerperAPIWrapper initialized successfully.")
+            return Tool(
+                name="web_search",
+                description="Search the web for information using Google Serper. Input should be a search query string.",
+                func=search.run
+            )
+        except ImportError:
+             # Should not happen if langchain_community installed, but good practice
+             self.logger.error("Failed to import GoogleSerperAPIWrapper. Is langchain-community installed?")
+             raise
         except Exception as e:
             self.logger.error(f"Exception creating web_search tool: {e}", exc_info=True)
             raise Exception(f"Failed to create web_search tool: {e}") from e
