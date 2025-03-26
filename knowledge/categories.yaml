@@ -1,25 +1,47 @@
 # Knowledge Base Categories
 model_specific:
   gemini:
-    - gemini-pro
-    - gemini-vision
-    - gemini-ultra
-    - gemini-embedding
     subcategories:
+    - gemini-2.0-flash
+      - prompts
+      - performance
+      - usefulness
+      - biasness
+      - challenges
+      - limitations
+      - training
+      - distillation
+      - evaluation
+      - use-cases
+    - gemini-2.0-pro-exp-03-25
+      - prompts
+      - performance
+      - distillation
+      - evaluation
+      - usefulness
+      - biasness
+      - challenges
+      - limitations
+      - use-cases
+    - gemini-flashlite
+      - prompts
+      - performance
+      - limitations
+      - use-cases
+    - gemini-embedding
       - prompts
       - performance
       - limitations
       - use-cases
   ollama:
-    - gemma-3:4b
     subcategories:
+    - gemma-3:4b
       - prompts
       - performance
       - limitations
       - use-cases
   lmstudio:
     - gemma-3-4b-it
-    subcategories:
       - prompts
       - performance
       - limitations
@@ -30,23 +52,39 @@ prompt_templates:
     - system-prompts
     - chain-of-thought
     - structured-thinking
+    - role-playing
+    - monte-carlo tree search
+    - adversarial
+    - counterfactual
+    - hypothetical
+    - analogical
   research:
     - data-collection
     - analysis-patterns
     - synthesis
+    - evaluation
+    - literature-review
   creative:
     - generation
     - innovation
     - brainstorming
+    - storytelling
+    - ideation
+    - design
   technical:
     - code-generation
     - system-design
+    - architecture
     - documentation
+    - testing
+    - debugging
 
 domain_knowledge:
   machine_learning:
     - architectures
     - training
+    - evaluation
+
     - deployment
     - optimization
   software_engineering:
@@ -54,11 +92,47 @@ domain_knowledge:
     - practices
     - tools
     - frameworks
+    - methodologies
+    - languages
+    - paradigms
   data_science:
     - analysis
     - visualization
     - statistics
     - pipelines
+    - tools
+    - frameworks
+  data_engineering:
+    - pipelines
+    - ETL
+    - data-lakes
+    - data-warehouses
+    - tools
+    - frameworks
+  data_management:
+    - governance
+    - quality
+    - security
+    - privacy
+    - compliance
+    - ethics
+  data_analysis:
+    - exploratory
+    - descriptive
+    - inferential
+    - predictive
+    - prescriptive
+    - causal
+    - correlation
+    - regression
+    - clustering
+    - statistical
+  natural_language_processing:
+    - tokenization
+    - embeddings
+    - models
+    - evaluation
+    - applications
 
 relationships:
   - source: prompt_templates/reasoning

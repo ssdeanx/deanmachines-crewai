@@ -8,6 +8,8 @@ import os
 import logging
 import json
 from typing import Any, List, Optional, Dict
+from pydantic import PrivateAttr # For non-validated private attributes if needed
+from pydantic_core import PydanticCustomError # If needed for custom validation
 from dotenv import load_dotenv
 from src.ollama.tools.tool_factory import ToolFactory
 from src.ollama.simplified_agents import get_gemini_agents
@@ -16,145 +18,137 @@ from src.ollama.knowledge.manager import KnowledgeManager
 from langchain_core.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.language_models.llms import LLM
 from langchain_core.outputs import GenerationChunk, Generation, LLMResult
-from dataclasses import dataclass, field
 
-# Load environment variables if needed (can be done once globally in your main script)
-load_dotenv()
 
-# Setup basic logging if desired (configure as needed)
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-@dataclass
+# Load environment variables if needed
+# load_dotenv()
+
+# Setup basic logging if desired
+# logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger(__name__)
+
 class GeminiChatLLM(LLM):
-    """Custom LangChain wrapper for Gemini."""
+    """
+    Custom LangChain LLM wrapper for Google Gemini models using google-generativeai.
 
-    model_name: str = field(default=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"))  # Flash model
-    temperature: float = field(default_factory=lambda: float(os.getenv("GEMINI_TEMPERATURE", "0.7")))
-    top_p: float = field(default_factory=lambda: float(os.getenv("GEMINI_TOP_P", "0.95")))
-    max_output_tokens: int = field(default_factory=lambda: int(os.getenv("GEMINI_MAX_TOKENS", "8192")))  # Flash token limit
-    context_window: int = field(default_factory=lambda: int(os.getenv("GEMINI_CONTEXT_WINDOW", "1000000")))  # 1M tokens for Flash
-    client: Any = field(init=False, default=None)
+    Uses Pydantic v2 model_post_init for client setup after config validation.
+    """
 
-    # Enhanced Safety Settings for Flash model
-    safety_settings: Dict[str, str] = field(default_factory=lambda: {
+    # --- Configuration parameters declared as class attributes ---
+    # Pydantic will validate these and use os.getenv for defaults.
+    model_name: str = os.getenv("GEMINI_MODEL", "gemini-1.5-pro-latest")
+    temperature: float = float(os.getenv("GEMINI_TEMPERATURE", 0.7))
+    top_p: float = float(os.getenv("GEMINI_TOP_P", 1.0))
+    # top_k: Optional[int] = os.getenv("GEMINI_TOP_K") # Add if needed
+    max_output_tokens: int = int(os.getenv("GEMINI_MAX_TOKENS", 8192))
+
+    # --- Safety Settings (Class attribute for consistency) ---
+    safety_settings: Dict[str, str] = {
         "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
         "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
         "HARM_CATEGORY_SEXUALLY_EXPLICIT": "BLOCK_NONE",
         "HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
-    })
+    }
 
-    def __post_init__(self):
-        """Initialize after dataclass sets the fields."""
-        super().__init__()
+    # --- Internal client instance ---
+    # Make it a private attribute so Pydantic doesn't treat it as a model field
+    # We will initialize it in model_post_init
+    _client: Any = PrivateAttr(default=None)
 
+    # --- REMOVED custom __init__ ---
+    # Let Pydantic handle initialization of model_name, temperature etc.
+
+    def model_post_init(self, __context: Any) -> None:
+        """
+        Initialize the google.generativeai client after Pydantic validation.
+        This method is called automatically by Pydantic v2 after __init__.
+        """
+        # Get API key from environment
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
+            # logger.error("GEMINI_API_KEY environment variable not set")
             raise ValueError("GEMINI_API_KEY environment variable not set")
 
-        # Configure Gemini
-        genai.configure(api_key="GEMINI_API_KEY")
+        try:
+            # Configure the Gemini API client library
+            genai.configure(api_key=api_key)
 
-        # Initialize model
-        generation_config = {
-            "temperature": self.temperature,
-            "top_p": self.top_p,
-            "max_output_tokens": self.max_output_tokens,
-            "candidate_count": 1
-        }
+            # Prepare generation config from validated class attributes
+            generation_config = genai.types.GenerationConfig(
+                temperature=self.temperature,
+                top_p=self.top_p,
+                # top_k=self.top_k, # Add if configured
+                max_output_tokens=self.max_output_tokens,
+                candidate_count=1
+            )
 
-        self.client = genai.GenerativeModel(
-            model_name=self.model_name,
-            generation_config=generation_config,
-            safety_settings=self.safety_settings
-        )
+            # Initialize the generative model client instance and store it
+            self._client = genai.GenerativeModel(
+                model_name=self.model_name,
+                generation_config=generation_config,
+                safety_settings=self.safety_settings
+            )
+            # logger.info(f"Gemini client initialized for model: {self.model_name}")
+        except Exception as e:
+            # logger.exception("Failed to initialize Gemini client in model_post_init")
+            raise ValueError(f"Failed to initialize Gemini client: {e}") from e
+
+    # --- Getter for the client to use in methods ---
+    @property
+    def client(self) -> Any:
+        """Get the initialized GenerativeModel client."""
+        if self._client is None:
+             # This should not happen if model_post_init ran correctly
+             raise ValueError("Gemini client not initialized. model_post_init may have failed.")
+        return self._client
+
 
     @property
     def _llm_type(self) -> str:
         """Return identifier for this LLM type."""
-        return "gemini-chat" # More specific type name
+        return "gemini-chat"
 
     def _get_generation_config(self, stop: Optional[List[str]] = None, **kwargs: Any) -> genai.types.GenerationConfig:
         """
         Helper to create GenerationConfig, merging instance defaults with runtime options.
         """
-        # Start with instance defaults
         config_dict = {
-            "temperature": self.temperature,
-            "top_p": self.top_p,
-            # "top_k": self.top_k, # Add if configured
-            "max_output_tokens": self.max_output_tokens,
-            "candidate_count": 1
+            "temperature": self.temperature, "top_p": self.top_p,
+            "max_output_tokens": self.max_output_tokens, "candidate_count": 1
         }
-
-        # Add stop sequences if provided (uses 'stop_sequences' parameter)
-        if stop:
-            config_dict["stop_sequences"] = stop
-
-        # Override with valid runtime kwargs if provided in the call
-        # Note: Only allows overriding parameters defined in GenerationConfig
+        if stop: config_dict["stop_sequences"] = stop
         allowed_runtime_keys = ["temperature", "top_p", "top_k", "max_output_tokens", "candidate_count", "stop_sequences"]
         for key, value in kwargs.items():
-            if key in allowed_runtime_keys:
-                config_dict[key] = value
-
-        # Ensure integer types for specific fields if necessary (though Pydantic in GenerationConfig might handle it)
-        if "max_output_tokens" in config_dict:
-             config_dict["max_output_tokens"] = int(config_dict["max_output_tokens"])
-        if "candidate_count" in config_dict:
-             config_dict["candidate_count"] = int(config_dict["candidate_count"])
-        # if "top_k" in config_dict and config_dict["top_k"] is not None:
-        #      config_dict["top_k"] = int(config_dict["top_k"])
-
+            if key in allowed_runtime_keys: config_dict[key] = value
+        # Ensure correct types if necessary
+        if "max_output_tokens" in config_dict: config_dict["max_output_tokens"] = int(config_dict["max_output_tokens"])
+        if "candidate_count" in config_dict: config_dict["candidate_count"] = int(config_dict["candidate_count"])
 
         return genai.types.GenerationConfig(**config_dict)
 
     def _handle_gemini_response(self, response: genai.types.GenerateContentResponse) -> str:
-        """
-        Safely extracts text from the Gemini response, handling potential errors/blocks.
-        """
+        """Safely extracts text from the Gemini response, handling potential errors/blocks."""
         try:
-            # Check for explicit blocks first (prompt or response)
-            # Check prompt feedback for blocks
             if hasattr(response, 'prompt_feedback') and response.prompt_feedback.block_reason:
                 raise ValueError(f"Gemini API blocked prompt. Reason: {response.prompt_feedback.block_reason}")
-
-            # If candidates exist, check the first one
             if response.candidates:
                 candidate = response.candidates[0]
-                # Check for content block in the candidate (finish reason SAFETY)
                 if candidate.finish_reason == "SAFETY":
-                    # Attempt to get safety rating details if available
                     safety_ratings_str = ""
                     if hasattr(candidate, 'safety_ratings') and candidate.safety_ratings:
                         safety_ratings_str = ", ".join([f"{rating.category.name}: {rating.probability.name}" for rating in candidate.safety_ratings])
                     raise ValueError(f"Gemini API blocked response due to safety settings. Finish Reason: SAFETY. Ratings: [{safety_ratings_str}]")
-                # Check for other abnormal finish reasons (e.g., RECITATION, OTHER)
                 elif candidate.finish_reason not in ["STOP", "MAX_TOKENS"]:
                      raise ValueError(f"Gemini API finished with unexpected reason: {candidate.finish_reason}")
-
-                # If content exists, join the text parts
-                # Check if content exists and has parts attribute
                 if hasattr(candidate, 'content') and candidate.content and hasattr(candidate.content, 'parts') and candidate.content.parts:
                     return "".join(part.text for part in candidate.content.parts if hasattr(part, 'text'))
-                else:
-                    # Finished normally (STOP or MAX_TOKENS) but no content parts - return empty string
-                    # This can happen if the model generates nothing or only stop sequences
-                    # logger.warning("Gemini response finished normally but contained no text content.") # Use logger if available
-                    return ""
+                else: return "" # Finished normally but no content
             else:
-                 # No candidates usually indicates a prompt block or other issue caught above,
-                 # but raise error if somehow reached here without candidates.
-                 # Check prompt feedback again just in case
                  if hasattr(response, 'prompt_feedback') and response.prompt_feedback.block_reason:
                      raise ValueError(f"Invalid Gemini response: No candidates found. Prompt blocked. Reason: {response.prompt_feedback.block_reason}")
-                 else:
-                     raise ValueError("Invalid Gemini response: No candidates found and prompt not blocked.")
-
-        except Exception as e:
-            # Re-raise exceptions for the main _call handler
-            # logger.exception(f"Error handling Gemini response: {e}") # Use logger if available
-            raise e
+                 else: raise ValueError("Invalid Gemini response: No candidates found and prompt not blocked.")
+        except Exception as e: raise e # Re-raise
 
     def _call(
         self,
@@ -163,95 +157,57 @@ class GeminiChatLLM(LLM):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> str:
-        """
-        Execute a single call to the Gemini model.
-        """
-        if not self.client:
-             raise ValueError("Gemini client not initialized.")
-
-        llm_output = {} # Initialize llm_output
+        """Execute a single call to the Gemini model."""
+        # Use the client property getter
+        client = self.client
+        llm_output = {}
         try:
-            # Use helper to get potentially overridden config
             generation_config = self._get_generation_config(stop=stop, **kwargs)
-
-            # Trigger LangChain callback for start
             if run_manager:
-                # Pass empty dict for metadata in Pydantic v2 style
                 run_manager.on_llm_start({}, [prompt], invocation_params=self._identifying_params)
-                # Use verbose flag from LLM base class if needed
-                # run_manager.on_text(prompt, color="green", end="\n", verbose=self.verbose)
-
-            # Call the Gemini API
-            response = self.client.generate_content(
-                prompt,
-                generation_config=generation_config
-                # stream=False # Default is False
-            )
-
-            # Process the response using the helper
+            response = client.generate_content(prompt, generation_config=generation_config)
             result_text = self._handle_gemini_response(response)
-
-            # Store token usage if available
             if hasattr(response, 'usage_metadata'):
                  llm_output["token_usage"] = {
                      "prompt_token_count": response.usage_metadata.prompt_token_count,
                      "candidates_token_count": response.usage_metadata.candidates_token_count,
                      "total_token_count": response.usage_metadata.total_token_count,
                  }
-                 llm_output["usage_metadata"] = response.usage_metadata # Store the whole object too
-
-            # Trigger LangChain callback for end
+                 llm_output["usage_metadata"] = response.usage_metadata
             if run_manager:
                 generation = Generation(text=result_text)
                 run_manager.on_llm_end(LLMResult(generations=[[generation]], llm_output=llm_output))
-                # Use verbose flag from LLM base class if needed
-                # run_manager.on_text(result_text, color="blue", end="\n", verbose=self.verbose)
-
             return result_text
-
         except Exception as e:
-            # Trigger LangChain callback for error
             if run_manager:
-                run_manager.on_llm_error(e, response=LLMResult(generations=[], llm_output=llm_output)) # Pass exception to callback
-            # logger.exception(f"Error during Gemini _call: {e}") # Use logger if available
-            # Re-raise the exception to be caught by higher-level logic if necessary
-            raise e
+                run_manager.on_llm_error(e, response=LLMResult(generations=[], llm_output=llm_output))
+            raise e # Re-raise
 
+    # --- Streaming method (Optional) ---
+    # def _stream(...) -> Iterator[GenerationChunk]: ... (Implement as before if needed)
 
-    # --- Optional: Implement streaming if needed ---
-    # def _stream(
-    #     self,
-    #     prompt: str,
-    #     stop: Optional[List[str]] = None,
-    #     run_manager: Optional[CallbackManagerForLLMRun] = None,
-    #     **kwargs: Any,
-    # ) -> Iterator[GenerationChunk]:
-    #     if not self.client:
-    #         raise ValueError("Gemini client not initialized.")
-    #
-    #     generation_config = self._get_generation_config(stop=stop, **kwargs)
-    #
-    #     stream = self.client.generate_content(
-    #         prompt,
-    #         generation_config=generation_config,
-    #         stream=True
-    #     )
-    #
-    #     for chunk in stream:
-    #         # Minimal error handling for stream example; robust handling needed
-    #         # Check chunk.prompt_feedback for blocks if necessary
-    #         if hasattr(chunk, 'parts') and chunk.parts:
-    #             chunk_text = "".join(part.text for part in chunk.parts if hasattr(part, 'text'))
-    #             if chunk_text: # Only yield if there's text
-    #                 gen_chunk = GenerationChunk(text=chunk_text)
-    #                 yield gen_chunk
-    #                 if run_manager:
-    #                     run_manager.on_llm_new_token(gen_chunk.text, chunk=gen_chunk)
-    #         # Handle potential finish reason errors in stream if needed
-    #         # elif chunk.candidates and chunk.candidates[0].finish_reason != "STOP":
-    #         #    # Handle safety or other errors in stream
-    #         #    pass
+    @property
+    def _identifying_params(self) -> Dict[str, Any]:
+        """Get the identifying parameters for LangChain callbacks and caching."""
+        return {
+            "model_name": self.model_name, "temperature": self.temperature,
+            "top_p": self.top_p, "max_output_tokens": self.max_output_tokens,
+        }
 
+# --- Example Usage (Optional - place in your main script) ---
+# if __name__ == "__main__":
+#     load_dotenv() # Ensure environment variables are loaded
+#     try:
+#         gemini_llm = GeminiChatLLM()
+#         print("Gemini LLM Initialized Successfully.")
+#         prompt = "Explain the difference between LangChain and CrewAI in simple terms."
+#         print(f"\nSending prompt: {prompt}\n")
+#         response_text = gemini_llm.invoke(prompt)
+#         print("--- Response ---")
+#         print(response_text)
+#         print("----------------")
+#     except ValueError as ve: print(f"Error: {ve}")
+#     except Exception as e: print(f"An unexpected error occurred: {e}")
 
     @property
     def _identifying_params(self) -> Dict[str, Any]:
@@ -434,7 +390,7 @@ class GeminiMultiCrew:
         crew = Crew(
             agents=list(self.agents.values()),
             tasks=self.tasks,
-            verbose=2,  # Maximum verbosity for detailed logging
+            verbose=1,  # Maximum verbosity since update
             process=Process.sequential  # Ensure sequential execution
         )
 
