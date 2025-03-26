@@ -13,64 +13,148 @@ from src.ollama.tools.tool_factory import ToolFactory
 from src.ollama.simplified_agents import get_gemini_agents
 from src.ollama.simplified_tasks import get_sequential_tasks
 from src.ollama.knowledge.manager import KnowledgeManager
-from langchain.callbacks.manager import CallbackManagerForLLMRun
+from langchain_core.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.language_models.llms import LLM
+from langchain_core.outputs import GenerationChunk, Generation, LLMResult
+from dataclasses import dataclass, field
 
-# Load environment variables at module level
+# Load environment variables if needed (can be done once globally in your main script)
 load_dotenv()
 
-class GeminiChatLLM(LLM):
-    """Custom LangChain wrapper for Gemini 2.0."""
+# Setup basic logging if desired (configure as needed)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    def __init__(
-        self,
-        model_name: str = None,
-        temperature: float = None,
-        top_p: float = None,
-        max_output_tokens: int = None,
-    ):
-        """Initialize with model parameters."""
+@dataclass
+class GeminiChatLLM(LLM):
+    """Custom LangChain wrapper for Gemini."""
+
+    model_name: str = field(default=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"))  # Flash model
+    temperature: float = field(default_factory=lambda: float(os.getenv("GEMINI_TEMPERATURE", "0.7")))
+    top_p: float = field(default_factory=lambda: float(os.getenv("GEMINI_TOP_P", "0.95")))
+    max_output_tokens: int = field(default_factory=lambda: int(os.getenv("GEMINI_MAX_TOKENS", "8192")))  # Flash token limit
+    context_window: int = field(default_factory=lambda: int(os.getenv("GEMINI_CONTEXT_WINDOW", "1000000")))  # 1M tokens for Flash
+    client: Any = field(init=False, default=None)
+
+    # Enhanced Safety Settings for Flash model
+    safety_settings: Dict[str, str] = field(default_factory=lambda: {
+        "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+        "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
+        "HARM_CATEGORY_SEXUALLY_EXPLICIT": "BLOCK_NONE",
+        "HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
+    })
+
+    def __post_init__(self):
+        """Initialize after dataclass sets the fields."""
         super().__init__()
 
-        # Set model parameters from environment or use defaults
-        self.model_name = model_name or os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-        self.temperature = temperature or float(os.getenv("GEMINI_TEMPERATURE", "0.7"))
-        self.top_p = top_p or float(os.getenv("GEMINI_TOP_P", "0.95"))
-        self.max_output_tokens = max_output_tokens or int(os.getenv("GEMINI_MAX_TOKENS", "8192"))
-        self.context_window = int(os.getenv("GEMINI_CONTEXT_WINDOW", "1000000"))
-
-        # Get API key from environment
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable not set")
 
-        # Configure the Gemini API
-        genai.configure(api_key=api_key)
+        # Configure Gemini
+        genai.configure(api_key="GEMINI_API_KEY")
 
-        # Initialize the model with proper configuration
+        # Initialize model
         generation_config = {
             "temperature": self.temperature,
             "top_p": self.top_p,
-            "max_output_tokens": self.max_output_tokens
+            "max_output_tokens": self.max_output_tokens,
+            "candidate_count": 1
         }
 
-        safety_settings = {
-            "harassment": "block_none",
-            "hate_speech": "block_none",
-            "sexually_explicit": "block_none",
-            "dangerous_content": "block_none"
-        }
-
-        self.model = genai.GenerativeModel(
+        self.client = genai.GenerativeModel(
             model_name=self.model_name,
             generation_config=generation_config,
-            safety_settings=safety_settings
+            safety_settings=self.safety_settings
         )
 
     @property
     def _llm_type(self) -> str:
-        """Return the type of LLM."""
-        return "gemini"
+        """Return identifier for this LLM type."""
+        return "gemini-chat" # More specific type name
+
+    def _get_generation_config(self, stop: Optional[List[str]] = None, **kwargs: Any) -> genai.types.GenerationConfig:
+        """
+        Helper to create GenerationConfig, merging instance defaults with runtime options.
+        """
+        # Start with instance defaults
+        config_dict = {
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            # "top_k": self.top_k, # Add if configured
+            "max_output_tokens": self.max_output_tokens,
+            "candidate_count": 1
+        }
+
+        # Add stop sequences if provided (uses 'stop_sequences' parameter)
+        if stop:
+            config_dict["stop_sequences"] = stop
+
+        # Override with valid runtime kwargs if provided in the call
+        # Note: Only allows overriding parameters defined in GenerationConfig
+        allowed_runtime_keys = ["temperature", "top_p", "top_k", "max_output_tokens", "candidate_count", "stop_sequences"]
+        for key, value in kwargs.items():
+            if key in allowed_runtime_keys:
+                config_dict[key] = value
+
+        # Ensure integer types for specific fields if necessary (though Pydantic in GenerationConfig might handle it)
+        if "max_output_tokens" in config_dict:
+             config_dict["max_output_tokens"] = int(config_dict["max_output_tokens"])
+        if "candidate_count" in config_dict:
+             config_dict["candidate_count"] = int(config_dict["candidate_count"])
+        # if "top_k" in config_dict and config_dict["top_k"] is not None:
+        #      config_dict["top_k"] = int(config_dict["top_k"])
+
+
+        return genai.types.GenerationConfig(**config_dict)
+
+    def _handle_gemini_response(self, response: genai.types.GenerateContentResponse) -> str:
+        """
+        Safely extracts text from the Gemini response, handling potential errors/blocks.
+        """
+        try:
+            # Check for explicit blocks first (prompt or response)
+            # Check prompt feedback for blocks
+            if hasattr(response, 'prompt_feedback') and response.prompt_feedback.block_reason:
+                raise ValueError(f"Gemini API blocked prompt. Reason: {response.prompt_feedback.block_reason}")
+
+            # If candidates exist, check the first one
+            if response.candidates:
+                candidate = response.candidates[0]
+                # Check for content block in the candidate (finish reason SAFETY)
+                if candidate.finish_reason == "SAFETY":
+                    # Attempt to get safety rating details if available
+                    safety_ratings_str = ""
+                    if hasattr(candidate, 'safety_ratings') and candidate.safety_ratings:
+                        safety_ratings_str = ", ".join([f"{rating.category.name}: {rating.probability.name}" for rating in candidate.safety_ratings])
+                    raise ValueError(f"Gemini API blocked response due to safety settings. Finish Reason: SAFETY. Ratings: [{safety_ratings_str}]")
+                # Check for other abnormal finish reasons (e.g., RECITATION, OTHER)
+                elif candidate.finish_reason not in ["STOP", "MAX_TOKENS"]:
+                     raise ValueError(f"Gemini API finished with unexpected reason: {candidate.finish_reason}")
+
+                # If content exists, join the text parts
+                # Check if content exists and has parts attribute
+                if hasattr(candidate, 'content') and candidate.content and hasattr(candidate.content, 'parts') and candidate.content.parts:
+                    return "".join(part.text for part in candidate.content.parts if hasattr(part, 'text'))
+                else:
+                    # Finished normally (STOP or MAX_TOKENS) but no content parts - return empty string
+                    # This can happen if the model generates nothing or only stop sequences
+                    # logger.warning("Gemini response finished normally but contained no text content.") # Use logger if available
+                    return ""
+            else:
+                 # No candidates usually indicates a prompt block or other issue caught above,
+                 # but raise error if somehow reached here without candidates.
+                 # Check prompt feedback again just in case
+                 if hasattr(response, 'prompt_feedback') and response.prompt_feedback.block_reason:
+                     raise ValueError(f"Invalid Gemini response: No candidates found. Prompt blocked. Reason: {response.prompt_feedback.block_reason}")
+                 else:
+                     raise ValueError("Invalid Gemini response: No candidates found and prompt not blocked.")
+
+        except Exception as e:
+            # Re-raise exceptions for the main _call handler
+            # logger.exception(f"Error handling Gemini response: {e}") # Use logger if available
+            raise e
 
     def _call(
         self,
@@ -79,55 +163,146 @@ class GeminiChatLLM(LLM):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> str:
-        """Call the Gemini API and return the response."""
-        try:
-            if run_manager:
-                run_manager.on_text(prompt, color="green", end="\n")
+        """
+        Execute a single call to the Gemini model.
+        """
+        if not self.client:
+             raise ValueError("Gemini client not initialized.")
 
-            response = self.model.generate_content(
+        llm_output = {} # Initialize llm_output
+        try:
+            # Use helper to get potentially overridden config
+            generation_config = self._get_generation_config(stop=stop, **kwargs)
+
+            # Trigger LangChain callback for start
+            if run_manager:
+                # Pass empty dict for metadata in Pydantic v2 style
+                run_manager.on_llm_start({}, [prompt], invocation_params=self._identifying_params)
+                # Use verbose flag from LLM base class if needed
+                # run_manager.on_text(prompt, color="green", end="\n", verbose=self.verbose)
+
+            # Call the Gemini API
+            response = self.client.generate_content(
                 prompt,
-                generation_config=self._get_generation_config(stop=stop, **kwargs)
+                generation_config=generation_config
+                # stream=False # Default is False
             )
 
-            if not response:
-                raise ValueError("Empty response from Gemini API")
+            # Process the response using the helper
+            result_text = self._handle_gemini_response(response)
 
-            if hasattr(response, 'error') and response.error:
-                raise ValueError(f"Gemini API error: {response.error}")
+            # Store token usage if available
+            if hasattr(response, 'usage_metadata'):
+                 llm_output["token_usage"] = {
+                     "prompt_token_count": response.usage_metadata.prompt_token_count,
+                     "candidates_token_count": response.usage_metadata.candidates_token_count,
+                     "total_token_count": response.usage_metadata.total_token_count,
+                 }
+                 llm_output["usage_metadata"] = response.usage_metadata # Store the whole object too
 
-            result = response.text
-
-            if stop:
-                for sequence in stop:
-                    if sequence in result:
-                        result = result[:result.index(sequence)]
-
+            # Trigger LangChain callback for end
             if run_manager:
-                run_manager.on_text(result, color="blue", end="\n")
+                generation = Generation(text=result_text)
+                run_manager.on_llm_end(LLMResult(generations=[[generation]], llm_output=llm_output))
+                # Use verbose flag from LLM base class if needed
+                # run_manager.on_text(result_text, color="blue", end="\n", verbose=self.verbose)
 
-            return result
+            return result_text
 
         except Exception as e:
-            error_msg = f"Error calling Gemini API: {str(e)}"
+            # Trigger LangChain callback for error
             if run_manager:
-                run_manager.on_text(error_msg, color="red", end="\n")
-            raise ValueError(error_msg)
+                run_manager.on_llm_error(e, response=LLMResult(generations=[], llm_output=llm_output)) # Pass exception to callback
+            # logger.exception(f"Error during Gemini _call: {e}") # Use logger if available
+            # Re-raise the exception to be caught by higher-level logic if necessary
+            raise e
 
-    def _get_generation_config(self, stop: Optional[List[str]] = None, **kwargs) -> Dict[str, Any]:
-        """Create a generation config dict."""
-        config = {
+
+    # --- Optional: Implement streaming if needed ---
+    # def _stream(
+    #     self,
+    #     prompt: str,
+    #     stop: Optional[List[str]] = None,
+    #     run_manager: Optional[CallbackManagerForLLMRun] = None,
+    #     **kwargs: Any,
+    # ) -> Iterator[GenerationChunk]:
+    #     if not self.client:
+    #         raise ValueError("Gemini client not initialized.")
+    #
+    #     generation_config = self._get_generation_config(stop=stop, **kwargs)
+    #
+    #     stream = self.client.generate_content(
+    #         prompt,
+    #         generation_config=generation_config,
+    #         stream=True
+    #     )
+    #
+    #     for chunk in stream:
+    #         # Minimal error handling for stream example; robust handling needed
+    #         # Check chunk.prompt_feedback for blocks if necessary
+    #         if hasattr(chunk, 'parts') and chunk.parts:
+    #             chunk_text = "".join(part.text for part in chunk.parts if hasattr(part, 'text'))
+    #             if chunk_text: # Only yield if there's text
+    #                 gen_chunk = GenerationChunk(text=chunk_text)
+    #                 yield gen_chunk
+    #                 if run_manager:
+    #                     run_manager.on_llm_new_token(gen_chunk.text, chunk=gen_chunk)
+    #         # Handle potential finish reason errors in stream if needed
+    #         # elif chunk.candidates and chunk.candidates[0].finish_reason != "STOP":
+    #         #    # Handle safety or other errors in stream
+    #         #    pass
+
+
+    @property
+    def _identifying_params(self) -> Dict[str, Any]:
+        """
+        Get the identifying parameters for LangChain callbacks and caching.
+        Includes parameters defined in the class and affects hashing.
+        """
+        return {
+            "model_name": self.model_name,
             "temperature": self.temperature,
             "top_p": self.top_p,
+            # "top_k": self.top_k, # Add if configured
             "max_output_tokens": self.max_output_tokens,
-            "candidate_count": 1
+            # Include safety_settings if they significantly alter behavior and should be part of the identity
+            # "safety_settings": self.safety_settings
         }
 
-        valid_params = ["temperature", "top_p", "max_output_tokens", "candidate_count"]
-        for param in valid_params:
-            if param in kwargs:
-                config[param] = kwargs[param]
-
-        return config
+# --- Example Usage (Optional - place in your main script) ---
+# if __name__ == "__main__":
+#     load_dotenv() # Ensure environment variables are loaded
+#
+#     try:
+#         gemini_llm = GeminiChatLLM()
+#         print("Gemini LLM Initialized Successfully.")
+#
+#         prompt = "Explain the difference between LangChain and CrewAI in simple terms."
+#         print(f"\nSending prompt: {prompt}\n")
+#
+#         # Simple call
+#         response_text = gemini_llm.invoke(prompt)
+#         print("--- Response ---")
+#         print(response_text)
+#         print("----------------")
+#
+#         # Example with stop sequence
+#         # response_with_stop = gemini_llm.invoke(prompt, stop=["CrewAI"])
+#         # print("\n--- Response with stop sequence ---")
+#         # print(response_with_stop)
+#         # print("--------------------------------")
+#
+#         # Example streaming call (uncomment _stream method first)
+#         # print("\n--- Streaming Response ---")
+#         # for chunk in gemini_llm.stream(prompt):
+#         #     print(chunk, end="", flush=True)
+#         # print("\n------------------------")
+#
+#
+#     except ValueError as ve:
+#         print(f"Configuration Error: {ve}")
+#     except Exception as e:
+#         print(f"An unexpected error occurred: {e}")
 
 class GeminiMultiCrew:
     """
